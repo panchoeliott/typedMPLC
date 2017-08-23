@@ -1,0 +1,19 @@
+notes
+TypeCheck after CT
+or
+TypeCheck after eval(alpha)
+
+evalDL Only occurs after evalCT so no DownA or UpA exist in terms evaluated in evalDL 
+
+A program (Expression) is run using --CT--> --RT--> hence all downA and UpA are removed in CT so an error is thrown for evalRT (UpA ...)
+
+A good test is 
+--UL-->--DL--> == Identity at runtime 
+similarly 
+--DL-->--UL--> == Identity at runtime (for valid terms (AST Terms)
+
+This is a good test to ensure things are working correctly.
+
+evalDL (AST [TagExpr TVar, x]) does not evaluate x recursively but UpA and DownA have been removed in CT hence 
+evalDL (AST [TagExpr TVar, DownA (AST [TagExpr TPromote, TagExpr TVarRep, AST[TagExpr TVarRep, VarRep "x"]])]) 
+cannot be evaluated at RT but can be at CT
