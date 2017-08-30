@@ -310,7 +310,7 @@ algWAST (AST (x:xs) , env, n)
             False                   -> Nothing
         otherwise                   -> Nothing
             
-    | otherwise = error "quack"
+    | otherwise = Just (Just [], (TyError (AST (x:xs)) TyCodeUnP TyCodeUnP), n)
     where areJust               = areJustList (st1':stL) && (x /= TagExpr TPromote) && (t1 ==TyTag)
           st1                   = algW (x, env, n)
           (st1':stL)            = algWList xs (x, env, n)      
@@ -557,20 +557,6 @@ dft (Just (type1, type2))
 -- dft (Just (a,b)) = Just (a,b)
 
     
-    
-containsError :: Type -> Bool
-containsError (TyVar st1)       = False
-containsError (TyVarRep st1)    = False
-containsError TyInt             = False
-containsError TyBool            = False
-containsError (TyFunc t1 t2)    = containsError t1 && containsError t2
-containsError (TyCode t1)       = containsError t1
-containsError TyTag             = False
-containsError TyGenSym          = False
-containsError TyErrorEq         = True
-containsError (TyError e1 t1 t2)= True
-containsError TyErrorLoop       = True
-containsError (TyErrorUnify t1 t2) = True
     
     
     

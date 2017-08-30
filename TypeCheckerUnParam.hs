@@ -136,11 +136,11 @@ algW ((App exp1 exp2), env, n)
     where areJust = (isJust (algW (exp1, env, n))) && (isJust (algW (exp2, (applySubEnv s1 env), n1))) && isJust s
           (Just (s1,t1, n1)) = algW (exp1, env, n)
           (Just (s2,t2, n2)) = algW (exp2, (applySubEnv s1 env), n1)
-          subV = unifier(s2t1, TyFunc t2 bnew)
           bnew = freshType n2 
-          s = (++) <$> subV <*> s2s1
-          s2s1 = (++) <$> s2 <*> s1
+          s2s1 = concatSub [s2, s1]
           s2t1 = subType s2 t1
+          subV = unifier(s2t1, TyFunc t2 bnew)
+          s = concatSub [subV, s2s1]
           t = subType subV bnew
 algW ((Lam name1 exp1), env, n) 
     | areJust           = (Just (s1, t, n1 + 1))
@@ -164,7 +164,7 @@ algW (PrimUni uniOp1 exp1, env, n)
     | otherwise         = Nothing
     where areJust = isJust (algW (exp1, env, n))
           (Just (s1, t1, n1))   = algW (exp1, env, n)
-          s                     = (++) <$> subV <*> s1
+          s                     = concatSub [subV, s1]
           subV                  = unifier (TyBool, subType s1 t1)
 algW (PrimBin binOp1 exp1 exp2, env, n) 
     | areJust               = case elem binOp1 binOpBool of
@@ -177,26 +177,26 @@ algW (PrimBin binOp1 exp1 exp2, env, n)
             True            -> case isJust subVt2Int of
                 True        -> Just (sInt, TyInt, n2)
                 False       -> Just (sInt, TyError exp2 t2 TyInt, n2)
-            False           -> Just (sInt, TyError exp2 t1 TyInt, n2)
+            False           -> Just (sInt, TyError exp1 t1 TyInt, n2)
         False | elem binOp1 binOpIntBool -> case isJust subVt1Int of
             True            -> case isJust subVt2Int of
                 True        -> Just (sInt, TyBool, n2)
                 False       -> Just (sInt, TyError exp2 t2 TyInt, n2)
-            False           -> Just (sInt, TyError exp2 t1 TyInt, n2)
+            False           -> Just (sInt, TyError exp1 t1 TyInt, n2)
         False               -> Nothing
     | otherwise     = Nothing
     where areJust               = isJust ( algW (exp1, env, n)) && isJust ( algW (exp2, (applySubEnv s1 env), n1))  
           (Just (s1, t1, n1))   = algW (exp1, env, n)
           (Just (s2, t2, n2))   = algW (exp2, (applySubEnv s1 env), n1)
-          s2s1                  = (++) <$> s2 <*> s1
+          s2s1                  = concatSub [s2, s1]
           s2s1t1                = subType s2s1 t1
           s2s1t2                = subType s2s1 t2
           subVt1Int             = unifier (s2s1t1, TyInt)
           subVt2Int             = unifier (subType subVt1Int  s2s1t2, TyInt )
           subVt1Bool            = unifier (s2s1t1, TyBool)
           subVt2Bool            = unifier (subType subVt1Bool s2s1t2, TyBool)
-          sInt                  = (++) <$> subVt2Int <*> subVt1Int
-          sBool                 = (++) <$> subVt2Bool <*> subVt1Bool
+          sInt                  = concatSub [subVt2Int, subVt1Int]
+          sBool                 = concatSub [subVt2Bool, subVt1Bool]
 algW (If expb exp1 exp2, env, n) 
     | areJust           = case isJust sb of
         True            -> case isJust subVt1t2 of 
@@ -266,6 +266,7 @@ algW (TagExpr tag1, env, n)             = Just (Just [], TyTag, n)
 algW (EvalA t1 exp0, env, n)            = case algW (exp0, env, n) of 
     Nothing                             -> Nothing
     Just (s1, TyCodeUnP, n1)            -> Just (s1, t1, n1)
+    Just (s1, TyCode tc, n1)            -> error (show tc)
     otherwise                           -> Nothing
 algW (Eval exp0, env, n)                = Nothing
 algW (LetDA name1 exp1 exp2, env, n) = case algW (exp1, env, n) of
@@ -473,21 +474,6 @@ dft (Just (type1, type2))
 
     
     
-containsError :: Type -> Bool
-containsError (TyVar st1)       = False
-containsError (TyVarRep st1)    = False
-containsError TyInt             = False
-containsError TyBool            = False
-containsError (TyFunc t1 t2)    = containsError t1 && containsError t2
-containsError (TyCodeUnP)       = False
-containsError TyTag             = False
-containsError TyGenSym          = False
-containsError TyErrorEq         = True
-containsError (TyError e1 t1 t2)= True
-containsError TyErrorLoop       = True
-containsError (TyErrorUnify t1 t2) = True
-    
-    
     
     
 concatSub :: [Sub] -> Sub
@@ -513,7 +499,7 @@ concatSub ((Just s1):xs)    = case concatSub xs of
           -- st3 = addCon [(texpLam, TyFunc tname1 texp1)] st2
 -- createCon1 (expApp@(App expe expe')) st0 = st3
     -- where [texpee', texpe, texpe'] = readTypeL  [expApp, expe, expe'] st0
-          -- st1 = createCon1 expe  st0
+          -- st1 = createCon1 expe  st0      
           -- st2 = createCon1 expe' st1
           -- st3 = addCon [(texpe, TyFunc texpe' texpee')] st2
 -- createCon1 (LitN numb1) st0 = st0

@@ -10,7 +10,7 @@ import Data.List
 import Data.Maybe
 import System.IO  
 import TestALL as ALL
-import TypeChecker as TC
+-- import TypeCheckerUnParam
 
 --evaluation at compile time then run-time (lambda)
 evalCTRT :: Expr -> Expr
@@ -45,7 +45,7 @@ evalUL ::Expr -> Expr
 evalUL expr1 = fst (evalFCUL (expr1, 1))
 
 --the charcter length limit of an expression used for loops.
-limitx = 1000
+limitx = 800
 
 
 
@@ -166,13 +166,23 @@ evalFCRT (Lam x exp1, n)
     | otherwise                 = (Error (Lam x (Error exp1)), newn)
     where (newexp1, newn)       = (evalFCRT (exp1, n)) 
 --APP RT (beta reduction)
+-- evalFCRT (App e1 e2, n )        = case (e1, e2) of    
+    -- ((Lam x eM), (eN))          -> do evalFCRT (sub (eN, x) (eM, n''))
+    -- other                       -> case (e1', e2') of
+        -- ((Lam x eM), eN)        -> do evalFCRT (sub (eN, x) (eM, n''))
+        -- otherwise               -> ((App e1' e2'), n'')
+    -- where (e1', n')             = evalFCRT (e1, n)
+          -- (e2', n'')            = evalFCRT (e2, n')
 evalFCRT (App e1 e2, n )        = case (e1', e2') of    
-    ((Lam x eM), (eN))          -> do evalFCRT (sub (eN, x) (eM, n''))
+    ((Lam x eM), eN )           -> evalFCRT (sub (eN, x) (eM, n''))
     (Error exp1, e2')           -> case (e1, e2) of
-        ((Lam x eM), eN)        -> do evalFCRT (sub (eN, x) (eM, n''))
+        ((Lam x eM), eN)        -> case evalFCRT (sub (eN, x) (eM, n'')) of
+            (Error eM', n''')   -> evalFCRT (sub (eN, x) (eM, n'')) 
+            (exp, m) | not (hasError exp)    -> (exp, m)
+            (other, m)           -> (Error other, m)
         otherwise               -> (Error (App e1 e2), n'')
     (e1' , Error exp2)          -> case (e1, e2) of
-        ((Lam x eM), eN)        -> do evalFCRT (sub (eN, x) (eM, n''))
+        ((Lam x eM), eN)        -> evalFCRT (sub (eN, x) (eM, n''))
         otherwise               -> (Error (App e1 e2), n'')
     ((eM), (eN))                -> (App eM eN, n'')
     where (e1', n')             = evalFCRT (e1, n)
@@ -210,23 +220,34 @@ evalFCRT (If bool1 exp1 exp2, n)
 evalFCRT (Let name1 exp1 exp2, n) 
     | areNotError [exp1, exp2]      = evalFCRT (sub (exp1, name1) (exp2, n))--uses sub
     | otherwise                     = (Error (Let name1 exp1 exp2), n)
-evalFCRT (exp0@(LetRec name1 exp1 exp2), n)
-    | loopsIndefiniedtly            = (ErrorLoop exp0, n)
-    | otherwise                     = evalFCRTLetRec (exp0, n)
-    where (newLetRec, newn)         = (evalFCRTLetRec (exp0, n))
-          loopsIndefiniedtly        = (lengthExpr newLetRec) >= limitx 
---evalFCRT (exp0@(LetRec name1 exp1 exp2), n) 
-    -- | growingLoopLimit              = (Error (Error (Error exp0)), newn) --bound on length of infinite growth
-    -- | stationaryLoop                = case grows name1 exp2 of
-        -- True                        -> (exp0, newn) -- equal but keep growing, leave LetRec 
-        -- False                       -> (exp2, n)    -- equal but does not grow, remove LetRec
-    -- | otherLoop                     = evalFCRT (newLetRec, newn) 
+-- evalFCRT (exp0@(LetRec name1 exp1 exp2), n)
+    -- | loopsIndefiniedtly            = (ErrorLoop exp0, n)
+    -- | notError && noSub             = (exp2, n) 
+    -- | notError                      = evalFCRT (sub (exp1, name1) (newexp2,n'))
     -- | otherwise                     = (Error exp0, n)
-    -- where (newLetRec, newn) = evalFCRTLetRec1 (exp0, n)
-          -- growingLoopLimit          = areNotError [exp1, exp2] && length (show newLetRec) > limitx
-          -- stationaryLoop            = areNotError [exp1, exp2] && newLetRec == exp0
-          -- otherLoop                 = areNotError [exp1, exp2]
-    -- --maybe require alpha equivalence rather than just equivalence
+    -- where loopsIndefiniedtly        = (lengthExpr exp0) >= limitx 
+          -- (newexp2, n')             = evalFCRT (exp2, n)
+          -- noSub                     = exp0 == (fst $ evalFCRT (sub (exp1, name1) (newexp2,n')))
+          -- notError                  = areNotError [exp1, newexp2]
+-- evalFCRT (exp0@(LetRec name1 exp1 exp2), n)
+    -- | loopsIndefiniedtly            = (ErrorLoop exp0, n)
+    -- | otherwise                     = evalFCRTLetRec (exp0, n)
+    -- where (newLetRec, newn)         = (evalFCRTLetRec (exp0, n))
+          -- loopsIndefiniedtly        = areNotError [exp1, exp2] && lengthExpr newLetRec >= limitx 
+evalFCRT (exp0@(LetRec name1 exp1 exp2), n)
+    | growingLoopLimit              = case newLetRec of 
+        ErrorLoop expn              -> (ErrorLoop exp0, newn) --bound on length of infinite growth
+        other                       -> (ErrorLoop other, newn)
+    | stationaryLoop                = case grows name1 exp2 of
+        True                        -> (exp0, newn) -- equal but keep growing, leave LetRec 
+        False                       -> (exp2, n)    -- equal but does not grow, remove LetRec
+    | otherLoop                     = evalFCRT (newLetRec, newn) 
+    | otherwise                     = (Error exp0, n)
+    where (newLetRec, newn) = evalFCRTLetRec (exp0, n)
+          growingLoopLimit          = areNotError [exp1, exp2] && lengthExpr newLetRec > limitx 
+          stationaryLoop            = areNotError [exp1, exp2] && newLetRec == exp0
+          otherLoop                 = areNotError [exp1, exp2]
+    --maybe require alpha equivalence rather than just equivalence
 evalFCRT (AST [], n)                = (Error (AST []), n)
 evalFCRT (AST (tag1 : xs), n) 
     | validASTList                  = (AST (newtag1:newxs), newn)
@@ -285,7 +306,7 @@ evalFCRTLetRec  ::  (Expr, FreshCounter) -> (Expr, FreshCounter)
 evalFCRTLetRec (exp0@(LetRec name1 exp1 exp2), n) 
     | largeLoop                     = (ErrorLoop newLetRec, newn) --bound on length of infinite growth
     | stationaryLoop                = case grows name1 exp2 of
-        True                        -> (exp0, newn) -- equal but keep growing, leave LetRec 
+        True                        -> (newLetRec, newn) -- equal but keep growing, leave LetRec 
         False                       -> (exp2, n)    -- equal but does not grow, remove LetRec
     | otherLoop                     = evalFCRTLetRec (newLetRec, newn) 
     | otherwise                     = (Error exp0, n)
@@ -293,12 +314,22 @@ evalFCRTLetRec (exp0@(LetRec name1 exp1 exp2), n)
           largeLoop                 = areNotError [exp1, exp2] && ((lengthExpr newLetRec) >= limitx)
           stationaryLoop            = areNotError [exp1, exp2] && newLetRec == exp0
           otherLoop                 = areNotError [exp1, exp2]
-    --maybe require alpha equivalence rather than just equivalence         
+    -- -- --maybe require alpha equivalence rather than just equivalence         
+ -- evalFCRTLetRec (exp0@(LetRec name1 exp1 exp2), n) 
+    -- | loopsIndefiniedtly            = (ErrorLoop exp0, n)
+    -- | notError && noSub             = (exp2, n) 
+    -- | notError                      = evalFCRT (sub (exp0, name1) (newexp2,n'))
+    -- | otherwise                     = (Error exp0, n)
+    -- where loopsIndefiniedtly        = areNotError [exp1, exp2] && (lengthExpr exp0) >= limitx 
+          -- (newexp2, n')             = evalFCRT (exp2, n)
+          -- noSub                     = exp0 == (fst $ evalFCRT (sub (exp0, name1) (newexp2,n')))
+          -- notError                  = areNotError [exp1, newexp2]
 evalFCRTLetRec (other, n) = (other, n)       
-          
+
+ 
 --eval one step (substitution) of LetRec:
 evalFCRTLetRec1 :: (Expr, FreshCounter) -> (Expr, FreshCounter)
-evalFCRTLetRec1 (LetRec name1 exp1 exp2, n)
+evalFCRTLetRec1 (exp0@(LetRec name1 exp1 exp2), n)
     | areNotError [newexp1, newexp2]    = (newLetRec, newn)
     | otherwise                         = (Error newLetRec, newn)
     where ([newexp1,newexp2], newn1)    = evalFCRTList ([exp1, exp2], n)
@@ -307,7 +338,7 @@ evalFCRTLetRec1 (LetRec name1 exp1 exp2, n)
           newLetRec                     = LetRec name1 newexp1 newLetexp2
     
 evalFCRTLetRec1 (exp, n) = (Error exp, n)
-
+-- (LetRec f M N) ---> (LetRec f M (N[M/f]))
 
 --essentially says whether variable is contained (free) in another expression.
 grows :: Name -> Expr -> Bool
@@ -319,7 +350,7 @@ grows name1 (Lam name2 exp2)
     | name1 == name2        = False
     | otherwise             = grows name1 exp2
 grows name1 (App (Lam name2 exp1) exp2)
-    | name1 == name2        = grows name1 exp1
+    | name1 == name2        = grows name1 exp2
     | otherwise             = (grows name1 (Lam name2 exp1)) || (grows name1 exp2)
 grows name1 (App exp1 exp2) = (grows name1 exp1) || (grows name1 exp2)
 grows name1 (LitN n)        = False
@@ -662,8 +693,8 @@ sub (eN, x) (EvalA  t1 exp1, n)                 = (EvalA t1 newexp1, newn)
     -- where (newexp1, newn)                    = sub (eN, x) (exp1, n)
 -- LetDA :
 sub (eN, x) (LetDA name1 exp1 exp2, n)          = (LetDA name1 newexp1 newexp2, newn)
-    where (newexp1, newn')                      = sub (eN, x) (exp1, n)
-          (newexp2, newn )                      = sub (eN, x) (exp2, newn')
+    where ([newexp1, newexp2], newn)                      = subListExp (eN, x) ([exp1, exp2], n)
+          
 --TagExpr :
 sub (eN, x) (TagExpr tag1, n)                   = (TagExpr tag1, n)          
 --Error :          

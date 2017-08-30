@@ -194,4 +194,65 @@ lengthExpr (TagExpr tag1) = 1
 lengthExpr (Error exp1)= 1 + lengthExpr exp1
 lengthExpr (ErrorLoop exp1)= 1 + lengthExpr exp1
 
+
+hasError :: (Expr)-> Bool
+hasError (VarRep string1)   = False
+hasError (Var n)            = False
+hasError (Lam n exp)        = hasError exp
+hasError (App a b)          = (hasError a) || (hasError b)
+hasError (LitN n)           = False
+hasError (LitB b)           = False
+hasError (PrimUni uni a)    = (hasError a)
+hasError (PrimBin bin a b)  = (hasError a) || (hasError b)
+hasError (If bool1 exp1 exp2)       = (hasError bool1) || (hasError exp1) || (hasError exp2)
+hasError (Let name1 exp1 exp2)      = (hasError exp1) || (hasError exp2)
+hasError (LetRec name1 exp1 exp2)   = (hasError exp1) || (hasError exp2)
+hasError (AST xs)           = and $ map hasError xs
+hasError GenSym             = False
+hasError (DownA exp1)       = hasError (exp1)
+hasError (UpA exp1)         = hasError (exp1)
+hasError (Eval exp1)        = hasError (exp1)
+hasError (EvalA type1 exp1)  = hasError (exp1) || (containsError type1)
+-- hasError (Lift exp1) = hasError (exp1)
+hasError (LetDA name1 exp1 exp2)    = (hasError exp1) || (hasError exp2)
+hasError (TagExpr tag1)     = False
+hasError (Error exp1)       = True
+hasError (ErrorLoop exp1)   = True
+hasError (ErrorType exp1 t1)   = True
+
+    
+containsError :: Type -> Bool
+containsError (TyVar st1)       = False
+containsError (TyVarRep st1)    = False
+containsError TyInt             = False
+containsError TyBool            = False
+containsError (TyFunc t1 t2)    = containsError t1 && containsError t2
+containsError (TyCode t1)       = containsError t1
+containsError TyTag             = False
+containsError TyGenSym          = False
+containsError TyErrorEq         = True
+containsError (TyError e1 t1 t2)= True
+containsError TyErrorLoop       = True
+containsError (TyErrorUnify t1 t2) = True
+
+compiled :: Expr -> Bool
+compiled exp1 = case exp1 of
+    VarRep n1               -> True
+    Var n1                  -> True
+    Lam n1 e1               -> compiled e1
+    App e1 e2               -> compiled e1 || compiled e2
+    LitN int1               -> True
+    LitB bool1              -> True
+    PrimUni uniOp1 e1       -> compiled e1
+    PrimBin binOp1 e1 e2    -> compiled e1 || compiled e2
+    If e1 e2 e3             -> compiled e1 || compiled e2 || compiled e3
+    Let n1 e1 e2            -> compiled e1 || compiled e2
+    LetRec n1 e1 e2         -> compiled e1 || compiled e2
+    AST exprL               -> and $ map compiled  exprL
+    DownA e1                -> False
+    UpA e1                  -> False
+    Eval e1                 -> False
+    LetDA name1 e1 e2       -> False
+    TagExpr tag1            -> True
+    Error e1                -> False
  
