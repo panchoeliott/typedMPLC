@@ -6,6 +6,7 @@ module SyntaxMPLC where
 -- import Test
 import Data.List
 import Data.Maybe
+import qualified Data.Map as M
 
 type Name = String
 
@@ -30,7 +31,7 @@ data Expr = Var Name
     | DownA Expr
     | UpA Expr
     --eval:
-    | Eval Expr
+    -- | Eval Expr
     | EvalA Type Expr
     --lift:
     -- | Lift Expr
@@ -46,16 +47,17 @@ data Expr = Var Name
     
 
 data Type = TyVar String
-    | TyVarRep String
+    | TyVarRep
     | TyInt 
     | TyBool
     | TyFunc Type Type
     | TyCodeUnP
-    | TyCode Type 
+    -- | TyCode Type 
     -- | TyCodePower Int Type 
     | TyTag
-    | TyGenSym --or TyVarRep ...?
+    | TyTBC
     | TyErrorEq
+    | TyErrorExpr Expr
     | TyError Expr Type Type -- expression1 has type1 but should have type2
     | TyErrorLoop
     | TyErrorUnify Type Type
@@ -63,11 +65,14 @@ data Type = TyVar String
     
 type TypeExpr = (Expr, Type)    
 
-type Env = Maybe [(Name, Type)]
+-- type Env = Maybe [(Name, Type)]
+
+
+type Env = M.Map Name Type
 
 -- type Env1 = Maybe [(Expr, Type)]
 
--- type Constraint = [(Expr, Type)]
+type Constraint = [(Type, Type)]
 
 -- type State = (Expr, Env, Constraint, Int) 
 
@@ -94,14 +99,14 @@ data Tag = TVarRep
     | TPromote
     -- | TUpA (should not exist)
     -- | TDownA (should not exist)
-    | TEval
+    -- | TEval
     | TEvalA Type
     -- | TLift
     -- | TLetDA (should not exist)
     deriving (Show, Eq)    
     
-data Eval = RTEval | CTEval | DownMLEval | UpMLEval
-    deriving (Show, Eq)
+-- data Eval = RTEval | CTEval | DownMLEval | UpMLEval
+    -- deriving (Show, Eq)
 
 data BinOp = Add | Mul | Min | Div | Eq | Lt | Gt | GtEq | Or | And
     deriving (Show, Eq)
@@ -124,7 +129,7 @@ tagLength0 :: [Tag]
 tagLength0 = [TGenSym]
 
 tagLength1 :: [Tag]
-tagLength1 = [TVarRep, TVar, TLitB, TLitN, TEval] ++ map TPrimUni uniOpAll
+tagLength1 = [TVarRep, TVar, TLitB, TLitN] ++ map TPrimUni uniOpAll
 
 tagLength2 :: [Tag]
 tagLength2 = [TLam, TApp] ++ map TPrimBin binOpAll
@@ -161,7 +166,7 @@ fv (AST xs) = nub $ concatMap fv xs
 fv (GenSym) = []
 fv (DownA exp1)= fv (exp1)
 fv (UpA exp1) = fv (exp1)
-fv (Eval exp1) = fv (exp1)
+fv (EvalA t exp1) = fv (exp1)
 -- fv (Lift exp1) = fv (exp1)
 fv (LetDA name1 exp1 exp2) = union (fv (exp1)) (delete name1 (fv (exp2)))
 
@@ -187,7 +192,7 @@ lengthExpr (AST xs) = 1 + (sum $ map lengthExpr xs)
 lengthExpr GenSym = 1
 lengthExpr (DownA exp1)= 1 + lengthExpr (exp1)
 lengthExpr (UpA exp1) = 1 + lengthExpr (exp1)
-lengthExpr (Eval exp1) = 1 + lengthExpr (exp1)
+lengthExpr (EvalA t exp1) = 1 + lengthExpr (exp1)
 -- lengthExpr (Lift exp1) = lengthExpr (exp1)
 lengthExpr (LetDA name1 exp1 exp2) = 1 +  (lengthExpr (exp1)) + (lengthExpr (exp2))
 lengthExpr (TagExpr tag1) = 1
@@ -211,7 +216,7 @@ hasError (AST xs)           = and $ map hasError xs
 hasError GenSym             = False
 hasError (DownA exp1)       = hasError (exp1)
 hasError (UpA exp1)         = hasError (exp1)
-hasError (Eval exp1)        = hasError (exp1)
+-- hasError (Eval exp1)        = hasError (exp1)
 hasError (EvalA type1 exp1)  = hasError (exp1) || (containsError type1)
 -- hasError (Lift exp1) = hasError (exp1)
 hasError (LetDA name1 exp1 exp2)    = (hasError exp1) || (hasError exp2)
@@ -223,17 +228,21 @@ hasError (ErrorType exp1 t1)   = True
     
 containsError :: Type -> Bool
 containsError (TyVar st1)       = False
-containsError (TyVarRep st1)    = False
+containsError (TyVarRep)        = False
 containsError TyInt             = False
 containsError TyBool            = False
-containsError (TyFunc t1 t2)    = containsError t1 && containsError t2
-containsError (TyCode t1)       = containsError t1
+containsError (TyFunc t1 t2)    = containsError t1 || containsError t2
+containsError (TyCodeUnP)       = False
 containsError TyTag             = False
-containsError TyGenSym          = False
+containsError (TyErrorExpr e1)  = True
 containsError TyErrorEq         = True
 containsError (TyError e1 t1 t2)= True
 containsError TyErrorLoop       = True
 containsError (TyErrorUnify t1 t2) = True
+
+areError :: [Type] -> Bool
+areError [] = False
+areError (x:xs) = (containsError x) || areError xs
 
 compiled :: Expr -> Bool
 compiled exp1 = case exp1 of
@@ -251,8 +260,31 @@ compiled exp1 = case exp1 of
     AST exprL               -> and $ map compiled  exprL
     DownA e1                -> False
     UpA e1                  -> False
-    Eval e1                 -> False
+    EvalA t1 e1             -> False
     LetDA name1 e1 e2       -> False
     TagExpr tag1            -> True
     Error e1                -> False
  
+ 
+ --Substitute type1 for type2 in type3 = type3 [type1/type2]          
+subType :: Sub -> Type -> Type
+subType Nothing a                                   = a
+subType (Just []) a                                 = a
+subType (Just [(ts1, name1)]) TyInt                 = TyInt
+subType (Just [(ts1, name1)]) TyBool                = TyBool
+subType (Just [(ts1, name1)]) (TyVar var1)
+    | (name1 == var1)                               = ts1
+    | otherwise                                     = (TyVar var1)
+subType (Just [(ts1, name1)]) TyVarRep              = TyVarRep
+subType (Just [(ts1, name1)]) (TyFunc type1 type2)  = TyFunc (subType (Just [(ts1, name1)]) type1) (subType (Just [(ts1, name1)]) type2)
+subType (Just [(ts1, name1)]) (TyCodeUnP)           = TyCodeUnP
+subType (Just [(ts1, name1)]) (TyTag)               = TyTag
+subType sub1 (TyErrorEq)                            = TyErrorEq
+subType sub1 (TyError a b c)                        = TyError a b c
+subType sub1 (TyErrorLoop)                          = TyErrorLoop
+
+subType (Just (x:xs)) type1                         = subType (Just [x]) (subType (Just xs) type1)
+
+subCon :: Sub -> Constraint -> Constraint
+subCon s [] = []
+subCon s ((t1,t2):xs) = ((subType s t1, subType s t2): subCon s xs)

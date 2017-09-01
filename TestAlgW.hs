@@ -9,18 +9,20 @@ import Data.Maybe
 
 
 
-
 checkTy :: (TestList, Type) ->  Bool
-checkTy ((a1, a2, a3, a4, a5, a6, a7, a8), t1) = case typefromSubType $ algW (genEnv $ evalCT a2) of 
-    ty1 | ty1 == t1 -> False
-    otherwise       -> True
+checkTy ((a1, a2, a3, a4, a5, a6, a7, a8), t1) = case typeExpCT a2 of 
+    Just ty1 | ty1 == t1        -> False
+    Just ty1 | ty1 /= t1        -> True
+    Nothing  | containsError t1 -> False
+    Nothing                     -> True
 
 
-filterAllTy :: [(TestList, Type)] -> [(String, Expr, Type, Type)]
-filterAllTy (x:xs)  = map (\((a1, a2, a3, a4, a5, a6, a7, a8), t1) -> (a8, a1, (typefromSubType $ algW (genEnv $ evalCT a2)), t1)) $ filter checkTy (x:xs)
+filterAllTy :: [(TestList, Type)] -> [(String, Expr, Maybe Type, Type)]
+filterAllTy (x:xs)  = map (\((a1, a2, a3, a4, a5, a6, a7, a8), t1) -> (a8, a1, typeExpCT a2, t1)) $ filter checkTy (x:xs)
     
 filtTyAll = filterAllTy ALL.typedAll
     
+{-
 
 
 
@@ -66,4 +68,4 @@ filtTyAll = filterAllTy ALL.typedAll
 typefromSubType :: SubType -> Type
 typefromSubType Nothing            = TyErrorEq
 typefromSubType (Just (s, t, n))   = t
- 
+ -}

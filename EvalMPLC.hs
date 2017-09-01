@@ -10,7 +10,7 @@ import Data.List
 import Data.Maybe
 import System.IO  
 import TestALL as ALL
--- import TypeCheckerUnParam
+import TypeCheckerUnParam
 
 --evaluation at compile time then run-time (lambda)
 evalCTRT :: Expr -> Expr
@@ -47,6 +47,9 @@ evalUL expr1 = fst (evalFCUL (expr1, 1))
 --the charcter length limit of an expression used for loops.
 limitx = 800
 
+
+typeExpCT :: Expr -> Maybe Type 
+typeExpCT e = applyUnifyCon' $ genCon $ evalCT e
 
 
 
@@ -108,17 +111,13 @@ evalFCCT (AST xs, n)
           newExp                        = AST newxs
 evalFCCT (GenSym, n)                    = (GenSym, n)       
 evalFCCT (DownA exp1, n) 
-    | areNotError [newExp]              = (newExp, newn)
-    | otherwise                         = (Error (DownA newExp), newn)
-    where (newExp, newn)                = evalFCDL $ evalFCRT $ evalFCCT (exp1, n)        
+    | areNotError [exp1CT] && typeExp exp1CT == Just TyCodeUnP = evalFCDL $ evalFCRT (exp1CT, newn)
+    | otherwise                         = (Error (DownA exp1CT), newn)
+    where (exp1CT, newn)                = evalFCCT (exp1, n)        
           
 evalFCCT (UpA exp1, n) 
     | isNotError exp1                   = evalFCUL (exp1, n)
     | otherwise                         = (Error (UpA exp1), n)
-evalFCCT (Eval exp1, n)
-    | isNotError newexp1                = (Eval newexp1, newn)
-    | otherwise                         = (Error (Eval newexp1), newn)
-    where (newexp1, newn)               = evalFCCT (exp1,n)    
 evalFCCT (EvalA t1 exp1, n)
     | isNotError newexp1                = (EvalA t1 newexp1, newn)
     | otherwise                         = (Error (EvalA t1 newexp1), newn)
@@ -190,19 +189,9 @@ evalFCRT (App e1 e2, n )        = case (e1', e2') of
 evalFCRT (LitN numb, n)         = (LitN numb, n)
 evalFCRT (LitB bool, n)         = (LitB bool, n)
 evalFCRT (PrimUni Not exp1, n)  = case newexp1 of
-    -- Var name1                   -> (PrimUni Not newexp1, n)
     LitB False                  -> (LitB True, newn)
     LitB True                   -> (LitB False, newn)
     LitN numb                   -> (Error (PrimUni Not newexp1), n)
-    -- App exp2 exp3               -> (PrimUni Not newexp1, n)
-    -- PrimUni uniOp1 exp2         -> (PrimUni Not newexp1, n)
-    -- PrimBin binOp1 exp2 exp3    -> (PrimUni Not newexp1, n)
-    -- If exp2 exp3 exp4           -> (PrimUni Not newexp1, n)
-    -- Let name1 exp2 exp3         -> (PrimUni Not newexp1, n)
-    -- LetRec name1 exp2 exp3      -> (PrimUni Not newexp1, n)
-    -- LetDA name1 exp2 exp3       -> (PrimUni Not newexp1, n)
-    -- Eval exp1                   -> (PrimUni Not newexp1, n)
-    -- EvalA ty1 exp1              -> (PrimUni Not newexp1, n)
     other                       -> ((PrimUni Not newexp1), newn)
     where (newexp1, newn)   = evalFCRT (exp1, n)
 evalFCRT (PrimBin binOp exp1 exp2, n)
@@ -257,14 +246,10 @@ evalFCRT (AST (tag1 : xs), n)
 evalFCRT (GenSym, n)                = (VarRep ("freshZ" ++ show n), n+1)            
 evalFCRT (DownA exp1, n)            = (Error (DownA exp1), n)        
 evalFCRT (UpA exp1, n)              = (Error (UpA exp1), n)
-evalFCRT (Eval exp1, n) 
-    | isNotError newRTDLRTexp1      = (newRTDLRTexp1, newn)
-    | otherwise                     = (Error newRTDLRTexp1, newn)
-    where (newRTDLRTexp1, newn)     = evalFCRT $ evalFCDL $ evalFCRT (exp1, n)
 evalFCRT (EvalA t1 exp1, n) 
-    | isNotError newRTDLRTexp1      = (newRTDLRTexp1, newn)
-    | otherwise                     = (Error newRTDLRTexp1, newn)
-    where (newRTDLRTexp1, newn)     = evalFCRT $ evalFCDL $ evalFCRT (exp1, n)
+    | isNotError newexp1 && typeExp newexp1 == Just t1 = evalFCRT (newexp1, newn)
+    | otherwise                     = (Error newexp1, newn)
+    where (newexp1, newn)     = evalFCDL $ evalFCRT (exp1, n)
 -- --LIFT RT
 -- evalFCRT (Lift exp1, n) = case exp1 of
     -- VarRep name1             -> (AST [(TagExpr TVarRep), VarRep name1], n)
@@ -283,7 +268,7 @@ evalFCRT (EvalA t1 exp1, n)
     -- DownA exp1               -> (AST [TagExpr TDownA, newexp1], newn)
     -- --UpA exp1               -> (Error (Lift (UpA exp1)), n)
     -- UpA exp1                 -> (AST [TagExpr TUpA, newexp1], newn)
-    -- Eval exp1                -> (AST [TagExpr TEval, newexp1], newn)
+    -- EvalA t exp1                -> (AST [TagExpr (TEval t), newexp1], newn)
     -- -- Lift exp1             -> (AST [TagExpr TLift, newexp1], newn)
     -- LetDA exp1               -> (Error exp1, n)
     -- TagExpr tag1             -> (TagExpr tag1, n)
@@ -368,7 +353,6 @@ grows name1 (AST (expL))    = or $ map (\x -> grows name1 x) expL
 grows name1 (GenSym)        = False
 grows name1 (DownA exp1)    = grows name1 exp1
 grows name1 (UpA exp1)      = grows name1 exp1
-grows name1 (Eval exp1)     = grows name1 exp1
 grows name1 (EvalA t1 exp1) = grows name1 exp1
 -- grows name1 (Lift exp1)  = grows name1 exp1
 grows name1 (LetDA name2 exp1 exp2)
@@ -501,10 +485,6 @@ evalFCDL (AST ((TagExpr TPromote):ulxs), n)
     -- | areNotError [exp1]                 = (DownA exp1, newn)
     -- | otherwise                          = (Error (DownA (AST [TagExpr TDownA, exp1])), newn)
     -- where ([exp1], newn)                 = evalFCDLList    ([ulexp1], n)
-evalFCDL (AST [TagExpr TEval, ulexp1], n)
-    | areNotError [exp1]                    = (Eval exp1, newn)
-    | otherwise                             = (Error (DownA (AST [TagExpr TEval, exp1])), newn)
-    where (exp1, newn)                      = evalFCDL (ulexp1, n)
 evalFCDL (AST [TagExpr (TEvalA t1), ulexp1], n)
     | areNotError [exp1]                    = (EvalA t1 exp1, newn)
     | otherwise                             = (Error (DownA (AST [TagExpr (TEvalA t1), exp1])), newn)
@@ -531,7 +511,7 @@ evalFCDL (UpA exp1, n)
     | otherwise                             = (Error newexp1, newn)
     where (ulexp1, newn')                   = evalFCUL (exp1, n)
           (newexp1, newn)                   = evalFCDL (ulexp1, newn')
-evalFCDL (Eval exp1, n)                     = (Error (DownA (Eval exp1)), n)
+evalFCDL (EvalA t exp1, n)                  = (Error (DownA (EvalA t exp1)), n)
 -- evalFCDL (Lift exp1, n)                  = (Error (DownA (Lift exp1)), n)
 evalFCDL (LetDA name1 exp1 exp2, n)         = (Error (DownA (LetDA name1 exp1 exp2)), n)
 evalFCDL (TagExpr tag1, n)                  = (TagExpr tag1, n)
@@ -602,13 +582,9 @@ evalFCUL (DownA  exp1, n)
 evalFCUL (UpA exp1, n) 
     | areNotError [exp1]        = evalFCUL $ evalFCUL (exp1, n)
     | otherwise                 = (Error (UpA (UpA exp1)), n) 
-evalFCUL (Eval exp1, n)
-    | areNotError [exp1]        = (AST [TagExpr TEval, ulexp1], newn)
-    | otherwise                 = (Error (UpA (Eval exp1)), n)
-    where (ulexp1, newn)        = evalFCUL (exp1, n)
 evalFCUL (EvalA t1 exp1, n)
     | areNotError [exp1]        = (AST [TagExpr (TEvalA t1), ulexp1], newn)
-    | otherwise                 = (Error (UpA (Eval exp1)), n)
+    | otherwise                 = (Error (UpA (EvalA t1 exp1)), n)
     where (ulexp1, newn)        = evalFCUL (exp1, n)
 -- evalFCUL (Lift exp1, n) = (AST [TagExpr TLift, ulexp1], newn)
     -- where (ulexp1, newn) = evalFCUL (exp1, n) 
@@ -616,6 +592,7 @@ evalFCUL (LetDA name1 exp1 exp2, n)
     | areNotError [exp1, exp2]  = (Error (UpA (LetDA  name1 exp1 exp2)), n)
     | otherwise                 = (Error (UpA (LetDA name1 exp1 exp2)), n) 
 evalFCUL (TagExpr tag, n)       = (TagExpr tag, n)
+-- evalFCUL (TagExpr tag, n)       = (AST [TagExpr TPromote, TagExpr tag], n)
 evalFCUL (Error exp1, n)        = (Error (UpA exp1), n)
 evalFCUL (ErrorLoop exp1, n)    = (ErrorLoop (UpA exp1), n)
     
@@ -683,9 +660,7 @@ sub (eN, x) (DownA exp1, n)                     = (DownA newexp1, newn)
 -- UpA :
 sub (eN, x) (UpA exp1, n)                       = (UpA newexp1, newn)
     where (newexp1, newn)                       = sub (eN, x) (exp1, n)
---Eval :
-sub (eN, x) (Eval exp1, n)                      = (Eval newexp1, newn)
-    where (newexp1, newn)                       = sub (eN, x) (exp1, n)
+--EvalA :
 sub (eN, x) (EvalA  t1 exp1, n)                 = (EvalA t1 newexp1, newn)
     where (newexp1, newn)                       = sub (eN, x) (exp1, n)
     -- -- Lift :
@@ -727,7 +702,10 @@ subListExp sub1 ((x:xs), n) = ((newx:newxs), newn)
 isTagLengthValid :: [Expr] -> Bool 
 isTagLengthValid [TagExpr TGenSym]                  = True
 isTagLengthValid ((TagExpr TPromote):newxs)         = True
-isTagLengthValid [(TagExpr tag1), exp1]             = elem tag1 tagLength1
+isTagLengthValid [(TagExpr tag1), exp1]             = case tag1 of 
+    x | elem tag1 tagLength1                        -> True
+    (TEvalA x)                                      -> True
+    otherwise                                       -> False
 isTagLengthValid [(TagExpr tag2), exp1, exp2]       = elem tag2 tagLength2
 isTagLengthValid [(TagExpr tag3), exp1, exp2, exp3] = elem tag3 tagLength3
 isTagLengthValid _                                  = False
@@ -797,7 +775,6 @@ isNotBool exp1 = case exp1 of
     GenSym                  -> False
     DownA exp1              -> False
     UpA exp1                -> True
-    Eval exp1               -> False
     EvalA t1 exp1           -> False
     TagExpr tag1            -> True
     Error exp1              -> True
@@ -823,7 +800,6 @@ isNotInt exp1 = case exp1 of
     GenSym                      -> False
     DownA exp1                  -> False
     UpA exp1                    -> True
-    Eval exp1                   -> False
     EvalA t1 exp1               -> False
     TagExpr tag1                -> True
     Error exp1                  -> True
@@ -857,8 +833,7 @@ isValue (AST exp1)              = True
 isValue GenSym                  = False
 isValue (DownA exp1)            = True
 isValue (UpA exp1)              = True
-isValue (Eval exp1)             = False
-isValue (EvalA t1 exp1)             = False
+isValue (EvalA t1 exp1)         = False
 -- isValue (Lift exp1)          = False??????????????????
 isValue (LetDA name1 exp1 exp2) = False
 isValue (TagExpr tag1)          = False
@@ -936,7 +911,7 @@ funcXTimes func count exp = Let "exp" exp (Let "count" count (Let "func" func (L
     -- AST exprL               -> and $ map containsUpADownA  exprL
     -- DownA exp1              -> True
     -- UpA exp1                -> True
-    -- Eval exp1               -> containsUpADownA exp1
+    -- EvalA t1 exp1           -> containsUpADownA exp1
     -- LetDA name1 exp1 exp2   -> containsUpADownA exp1 || containsUpADownA exp2
     -- TagExpr tag1            -> False
     -- Error exp1              -> False

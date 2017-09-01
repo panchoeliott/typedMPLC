@@ -1,102 +1,225 @@
 module TypeCheckerUnParam where
 
-import EvalMPLC
+-- import EvalMPLC
 import SyntaxMPLC
 import Data.List
 import Data.Maybe
 import System.IO 
-
+import qualified Data.Map as M
 -- Check the type of an expression is valid, i.e the program does not have type errors
 
 -- Takes in expression and 
 
+typeExp :: Expr -> Maybe Type 
+typeExp e = applyUnifyCon' $ genCon  e
 
-genEnv :: Expr -> (State)
-genEnv exp1 = genEnv' exp1' st0
-    where st0@(exp1', env, n) = replaceGenSym (exp1, Just [], 1)
+
+
+
+genEnv :: Expr -> State
+genEnv exp1 = genEnv' exp1 (exp1, M.empty, 1)
+  
   
 
 genEnv' :: Expr -> State -> State
--- genEnv' exp (exp00, Nothing, [],n) = (exp00, Nothing, [],n)
-genEnv' (Var name1) (exp00, env1, n) = case env1 of
-    Nothing     -> (exp00, Nothing, n)
-    Just []     -> (exp00, Just [(name1, TyVar ("Type" ++ show n ++ "{" ++ name1 ++ "}"))], n+1)
-    otherwise   -> case name1 `isNameInEnv` env1 of
-        True    -> (exp00, env1,n)
-        False   -> (exp00, (++) <$> (Just [(name1, TyVar ("Type" ++ show n ++ "{" ++ name1 ++ "}"))]) <*>  env1, n+1)
-genEnv' (Lam name1 exp1) (exp00, env1,n)          =  foldr genEnv' (exp00, env1, n) [exp1, (Var name1)]
-genEnv' (App exp1 exp2)  (exp00, env1, n)          =  foldr genEnv' (exp00, env1, n) [exp2, exp1]
-genEnv' (LitB bool1) (exp00, env1, n)              = (exp00, env1, n)
-genEnv' (LitN numb1) (exp00, env1,n)              = (exp00, env1, n)
-genEnv' (PrimUni uOp1 exp1) (exp00, env1,n)       = genEnv' exp1 (exp00, env1, n)
-genEnv' (PrimBin bOp1 exp1 exp2) (exp00, env1, n)  =  foldr genEnv' (exp00, env1, n) [exp2, exp1]
-genEnv' (If bool1 exp1 exp2) (exp00, env1, n)      =  foldr genEnv' (exp00, env1,n) [exp2, exp1, bool1]
-genEnv' (Let name1 exp1 exp2) (exp00, env1, n)     = foldr genEnv' (exp00, env1, n) [exp2, exp1, (Var name1)]
-genEnv' (LetRec name1 exp1 exp2) (exp00, env1, n)  = foldr genEnv' (exp00, env1, n) [exp2, exp1, (Var name1)]
-genEnv' (AST list1) (exp00, env1, n)               = foldr genEnv' (exp00, env1, n) list1
-genEnv' (VarRep name1) (exp00, env1, n)            = case env1 of
-    Nothing     -> (exp00, Nothing, n)
-    Just []     -> (exp00, Just [(name1, TyVarRep ("Type" ++ show n ++ "{" ++ name1 ++ "}"))], n+1)
-    otherwise   -> case name1 `isNameInEnv` env1 of
-        True    -> (exp00, env1,n)
-        False   -> (exp00, (++) <$> (Just [(name1, TyVarRep ("Type" ++ show n ++ "{" ++ name1 ++ "}"))]) <*>  env1, n+1)
-genEnv' GenSym (exp00, env1, n)                    = (exp00, (++) <$> (Just [(name1, TyVarRep ("Type" ++ show n ++ "{" ++ name1 ++ "}"))]) <*> env1, n+1)
-    where name1 = freshVarRepName n
-genEnv' (DownA exp1) (exp00, env1, n)              =  genEnv' exp1 (exp00, env1, n)
-genEnv' (UpA exp1) (exp00, env1, n)                =  genEnv' exp1 (exp00, env1, n)
-genEnv' (Eval exp1) (exp00, env1, n)               =  genEnv' exp1 (exp00, env1, n)
-genEnv' (EvalA t1 exp1) (exp00, env1, n)           =  genEnv' exp1 (exp00, env1, n)
-genEnv' (LetDA name1 exp1 exp2) (exp00, env1, n)   =  foldr genEnv' (exp00, env1, n) [exp2, exp1, (Var name1)]
-genEnv' (TagExpr tag1) (exp00, env1, n)            = (exp00, env1, n)
-genEnv' (Error exp1) (exp00, env1, n)              = (exp00, Nothing, n)
-genEnv' (ErrorLoop exp1) (exp00, env1, n)          = (exp00, Nothing, n)
+genEnv' exp (st@(exp00, env1,n)) = case exp of
+    (Var nm1)           -> 
+        let newnm1      = TyVar ("TyVar" ++ show n ++ "{" ++ nm1 ++ "}") in 
+        case M.lookup nm1 env1 of
+            Nothing                 -> (exp00, M.insert nm1 newnm1 env1 , n + 1)
+            Just (t1)               -> st
+    (Lam nm1 exp1)              -> foldr genEnv' st [exp1, (Var nm1)]
+    (App exp1 exp2)             -> foldr genEnv' st [exp2, exp1]
+    (LitB bool1)                -> st
+    (LitN numb1)                -> st
+    (PrimUni uOp1 exp1)         -> genEnv' exp1 st
+    (PrimBin bOp1 exp1 exp2)    -> foldr genEnv' st [exp2, exp1]
+    (If bool1 exp1 exp2)        -> foldr genEnv' st [exp2, exp1, bool1]
+    (Let nm1 exp1 exp2)         -> foldr genEnv' st [exp2, exp1, (Var nm1)]
+    (LetRec nm1 exp1 exp2)      -> foldr genEnv' st [exp2, exp1, (Var nm1)]
+    (AST list1)                 -> foldr genEnv' st list1
+    (VarRep nm1)                -> st
+    GenSym                      -> st
+    (DownA exp1)                -> genEnv' exp1 st
+    (UpA exp1)                  -> genEnv' exp1 st
+    (EvalA t1 exp1)             -> genEnv' exp1 st
+    (LetDA name1 exp1 exp2)     -> foldr genEnv' st [exp2, exp1, (Var name1)]
+    (TagExpr tag1)              -> st
+    (Error exp1)                -> error ("error in term: " ++ show exp)
+    (ErrorLoop exp1)            -> error ("error in term: " ++ show exp)
 
+genCon :: Expr -> (Constraint, Type, FreshCounter)
+genCon e1 = genCon' e1 (genEnv e1)
+    
+genCon' :: Expr -> State -> (Constraint, Type, FreshCounter)
+genCon' exp (st@(exp00, env, n)) = case exp of
+    (Var nm1)                   -> ([], env M.! nm1, n)
+    (Lam nm1 e1) -> 
+        let t = freshType n 
+            (ce1, te1, n') = genCon' e1 (exp00, (M.insert nm1 t env), n+1)
+        in (ce1, TyFunc t te1, n')
+    (App e1 e2) -> 
+        let ([(ce1, te1), (ce2, te2)], n') = genConL [e1, e2] st
+            t = freshType n' 
+        in                      (ce1 ++ ce2 ++ [(te1, TyFunc te2 t)], t, n' +1)
+    (LitB bl1)                  -> ([], TyBool, n)
+    (LitN nmb1)                 -> ([], TyInt, n)
+    (PrimUni uOp1 e1) -> 
+        let (ce1, te1, n') = genCon' e1 st
+        in case elem uOp1 uniOpBool of 
+            True                -> (ce1 ++ [(te1, TyBool)], TyBool, n')
+            False               -> error ("no such unary operation" ++ show uOp1)
+    (PrimBin bOp1 e1 e2) -> 
+        let ([(ce1, te1), (ce2, te2)], n') = genConL [e1, e2] st
+        in case elem bOp1 binOpBool of 
+            True                            -> (ce1 ++ ce2 ++ [(te1, TyBool), (te2, TyBool)], TyBool, n')
+            False | elem bOp1 binOpIntBool  -> (ce1 ++ ce2 ++ [(te1, TyInt), (te2, TyInt)], TyBool, n')
+            False | elem bOp1 binOpIntInt   -> (ce1 ++ ce2 ++ [(te1, TyInt), (te2, TyInt)], TyInt, n')
+            False               -> error ("no such binary operation" ++ show bOp1)
+    (If b1 e1 e2) -> 
+        let ([(cb1, tb1), (ce1, te1), (ce2, te2)], n') = genConL [b1, e1, e2] st
+        in  (cb1 ++ ce1 ++ ce2 ++ [(tb1, TyBool), (te1, te2)], te1, n')
+        
+    (Let nm1 e1 e2) ->
+        let ([(ce1, te1), (ce2, te2)], n') = genConL [e1, e2] st
+        in  (ce1 ++ ce2 ++ [(env M.! nm1, te1)], te2, n')
+        
+    (LetRec nm1 e1 e2)      ->  
+        let ([(ce1, te1), (ce2, te2)], n') = genConL [e1, e2] st
+        in  (ce1 ++ ce2 ++ [(env M.! nm1, te1)], te2, n')    
+    (AST list1)                 ->
+        let (list1', n') = genConL list1 st
+            clist1' = concat $ fst $ unzip list1' ------ ????????????????
+        in  (clist1', TyCodeUnP, n')    
+    (VarRep nm1)                -> ([], TyVarRep, n)
+    GenSym                      -> ([], TyVarRep, n)
+    (DownA e1) -> 
+        let (ce1, te1, n') = genCon' e1 st 
+        in                      (ce1 ++ [(te1, TyCodeUnP)], TyErrorExpr exp, n')
+        
+    (UpA e1) -> 
+        let (ce1, te1, n') = genCon' e1 st 
+        in                      (ce1, TyErrorExpr exp, n')
+    (EvalA t1 e1) -> 
+        let (ce1, te1, n') = genCon' e1 st 
+        in                      (ce1 ++ [(te1, TyCodeUnP)], t1, n')
+    (LetDA nm1 e1 e2)     -> 
+        let ([(ce1, te1), (ce2, te2)], n') = genConL [e1, e2] st
+        in  (ce1 ++ ce2 ++ [(env M.! nm1, te1)], TyError exp te2 te2, n')   
+    (TagExpr tag1)              -> ([], TyTag, n)
+    (Error e1)                -> ([], TyErrorExpr exp, n)
+    (ErrorLoop e1)            -> ([], TyErrorExpr exp, n)
+    
+genConL :: [Expr] -> State -> ([(Constraint, Type)], FreshCounter)
+genConL [] st@(exp00, env, n) = ([], n)
+genConL (e1:xs) st@(exp00, env, n) =
+    let (ce1, te1, n')  = genCon' e1 st
+        (ctL, n'')      = genConL xs (exp00, env, n')
+    in  ([(ce1, te1)] ++ ctL, n'') 
 
-
+    
+applyUnifyCon :: (Constraint, Type, FreshCounter) -> Maybe (Type, FreshCounter)
+applyUnifyCon (c, t, n) = case unifyCon c of
+    Just s          -> Just (subType (Just s) t, n)
+    Nothing         -> Nothing
+    
+applyUnifyCon' :: (Constraint, Type, FreshCounter) -> Maybe (Type)
+applyUnifyCon' (c, t, n) = case unifyCon c of
+    Just s          -> Just (subType (Just s) t)
+    Nothing         -> Nothing
+    
+unifyCon :: Constraint -> Maybe [(Type, Name)] --Sub
+unifyCon constr = case constr of
+    []                      -> Just []
+    ((t1, t2):rest) -> case (t1, t2) of
+        (TyInt, TyInt)              -> unifyCon rest
+        (TyBool, TyBool)            -> unifyCon rest
+        (TyVarRep, TyVarRep)        -> unifyCon rest
+        (TyFunc t11 t12, TyFunc t21 t22) -> unifyCon (rest ++ [(t11, t21), (t12, t22)])
+        (TyVar x, t)                -> case t of 
+            TyVar x' | x == x'      -> unifyCon rest
+            otherwise               -> case occursIn x t of
+                True                    -> Nothing
+                False                   -> case unifyCon (subCon (Just [(t, x)]) rest) of 
+                    Nothing         -> Nothing
+                    (Just subRest)  -> Just (subRest ++ [(t, x)])
+        (t, TyVar x)                -> case t of 
+            TyVar x' | x == x'      -> unifyCon rest
+            otherwise               -> case occursIn x t of
+                True                    -> Nothing
+                False                   -> case unifyCon (subCon (Just [(t, x)]) rest) of 
+                    Nothing         -> Nothing
+                    (Just subRest)  -> Just (subRest ++ [(t, x)])             
+        (TyCodeUnP, TyCodeUnP)      -> unifyCon rest
+        (TyTag, TyTag)              -> unifyCon rest
+        -- (t, TyVar x)                -> case occursIn x t of
+            -- True                    -> Nothing
+            -- False                   -> case unifyCon (subCon (Just [(t, x)]) rest) of 
+                -- Nothing         -> Nothing
+                -- (Just subRest)  -> Just (subRest ++ [(t, x)])
+        other | areError [t1, t2]   -> Nothing
+        otherwise                   -> Nothing
+        
+occursIn :: Name -> Type -> Bool
+occursIn x t = case t of
+    (TyVar nm1) | x == nm1  -> True
+    (TyVar nm1) | x /= nm1  -> False
+    TyFunc t1 t2            -> occursIn x t1 || occursIn x t2
+    otherwise               -> False
+    
+{-
 replaceGenSym :: State -> State
-replaceGenSym st0@(Var name1, env, n) =st0
-replaceGenSym st0@(Lam name1 exp1, env, n) = (Lam name1 nexp1, nenv, nn)
-    where (nexp1, nenv, nn) = replaceGenSym (exp1, env, n)
-replaceGenSym st0@(App exp1 exp2, env, n) = (App nexp1 nexp2, nnenv, nnn)
-    where (nexp1, nenv, nn)     = replaceGenSym (exp1, env, n)
-          (nexp2, nnenv, nnn)   = replaceGenSym (exp2, nenv, nn)
-replaceGenSym st0@(LitN numb1, env, n) = st0
-replaceGenSym st0@(LitB bool1, env, n) = st0
-replaceGenSym st0@(PrimUni uniOp1 exp1, env, n) = (PrimUni uniOp1 nexp1, nenv, nn)
-    where (nexp1, nenv, nn) = replaceGenSym (exp1, env, n)
-replaceGenSym st0@(PrimBin binOp1 exp1 exp2, env, n) = (PrimBin binOp1 nexp1 nexp2, nnenv, nnn)
-    where (nexp1, nenv, nn)     = replaceGenSym (exp1, env, n)
-          (nexp2, nnenv, nnn)   = replaceGenSym (exp2, nenv, nn)
-replaceGenSym st0@(If bool1 exp1 exp2, env, n) = (If nbool1 nexp1 nexp2, nnnenv, nnnn)
-    where (nbool1, nenv, nn)    = replaceGenSym (bool1, env, n)
-          (nexp1, nnenv, nnn)   = replaceGenSym (exp1, nenv, nn)
-          (nexp2, nnnenv, nnnn) = replaceGenSym (exp2, nnenv, nnn)
-replaceGenSym st0@(Let name1 exp1 exp2, env, n) = (Let name1 nexp1 nexp2, nnenv, nnn)
-    where (nexp1, nenv, nn)     = replaceGenSym (exp1, env, n)
-          (nexp2, nnenv, nnn)   = replaceGenSym (exp2, nenv, nn)
-replaceGenSym st0@(LetRec name1 exp1 exp2, env, n) = (LetRec name1 nexp1 nexp2, nnenv, nnn)
-    where (nexp1, nenv, nn)     = replaceGenSym (exp1, env, n)
-          (nexp2, nnenv, nnn)   = replaceGenSym (exp2, nenv, nn)
-replaceGenSym st0@(AST (exprList), env, n) = (AST nexprList, nenv, nn)
-    where (nexprList, nenv, nn)     = replaceGenSymList (exprList, env, n) 
-replaceGenSym st0@(VarRep name1, env, n) =st0
-replaceGenSym st0@(GenSym, env, n) = (VarRep name1, env, n+1)
-    where name1 = freshVarRepName n
-replaceGenSym st0@(UpA exp1, env, n) = (UpA nexp1, nenv, nn)
-    where (nexp1, nenv, nn) = replaceGenSym (exp1, env, n)
-replaceGenSym st0@(DownA exp1, env, n) = (DownA nexp1, nenv, nn)
-    where (nexp1, nenv, nn) = replaceGenSym (exp1, env, n)
-replaceGenSym st0@(Eval exp1, env, n) = (Eval nexp1, nenv, nn)
-    where (nexp1, nenv, nn) = replaceGenSym (exp1, env, n)
-replaceGenSym st0@(EvalA t1 exp1, env, n) = (EvalA t1 nexp1, nenv, nn)
-    where (nexp1, nenv, nn) = replaceGenSym (exp1, env, n)
-replaceGenSym st0@(LetDA name1 exp1 exp2, env, n) = (LetDA name1 nexp1 nexp2, nnenv, nnn)
-    where (nexp1, nenv, nn)     = replaceGenSym (exp1, env, n)
-          (nexp2, nnenv, nnn)   = replaceGenSym (exp2, nenv, nn)
-replaceGenSym st0@(TagExpr tag1, env, n) =st0    
-replaceGenSym st0@(Error exp1, env, n) =st0
-replaceGenSym st0@(ErrorLoop exp1, env, n) =st0
-replaceGenSym st0@(ErrorType exp1 type1, env, n) =st0
+replaceGenSym st@(exp, env, n) = case exp of
+    (Var nm1)         -> st
+	(Lam nm1 exp1)    -> 
+        let (nexp1, nenv, nn) = replaceGenSym (exp1, env, n) in 
+        (Lam nm1 nexp1, nenv, nn)
+    App exp1 exp2   -> 
+        let ([exp1', exp2'], env', n') = replaceGenSymList ([exp1, exp2], env, n) in 
+        (App exp1' exp2', env'', n'')
+    LitN numb1 = st
+	LitB bool1 = st
+	PrimUni uniOp1 exp1 ->
+        let (exp1', env', n') = replaceGenSym (exp1, env, n) in
+        (PrimUni uniOp1 exp1', env', n')
+    PrimBin binOp1 exp1 exp2 ->
+        let ([exp1', exp2'], env', n') = replaceGenSymList ([exp1, exp2], env, n) in 
+        (PrimBin binOp1 exp1' exp2', env', n')
+    
+	If bool1 exp1 exp2 ->
+        let ([bool1',exp1', exp2'], env', n') = replaceGenSymList ([bool1, exp1, exp2], env, n) in 
+        (If bool1' exp1' exp2', env', n')
+        
+	Let name1 exp1 exp2 ->
+        let ([exp1', exp2'], env', n') = replaceGenSymList ([exp1, exp2], env, n) in 
+        (Let name1 exp1' exp2', env', n')
+	LetRec name1 exp1 exp2 ->
+        let ([exp1', exp2'], env', n') = replaceGenSymList ([exp1, exp2], env, n) in 
+        (LetRec name1 exp1' exp2', env', n')
+	AST exprList    ->
+        let (exprList', env', n') = replaceGenSymList (exprList, env, n) in
+        (AST exprList', env', n')
+	VarRep name1    -> st
+	GenSym          -> 
+        let name1 = freshVarRepName n in 
+        (VarRep name1, env, n+1)
+	UpA exp1        ->
+        let (exp1', env', n') = replaceGenSym (exp1, env, n) in
+        (UpA exp1', env', n')
+    DownA exp1      ->
+        let (exp1', env', n') = replaceGenSym (exp1, env, n) in
+        (DownA exp1', env', n')
+    EvalA ty1 exp1  ->
+        let (exp1', env', n') = replaceGenSym (exp1, env, n) in
+        (EvalA ty1 exp1, env', n')
+    LetDA name1 exp1 exp2   ->
+        let ([exp1', exp2'], env', n') = replaceGenSymList ([exp1, exp2], env, n) in 
+        (LetDA name1 exp1' exp2', env', n')
+	    
+	TagExpr tag1            -> st    
+	Error exp1              -> st
+	ErrorLoop exp1          -> st
+	ErrorType exp1 type1    -> st
     
 replaceGenSymList :: ([Expr], Env, Int) -> ([Expr], Env, Int)
 replaceGenSymList ([], env, n) = ([], env, n)
@@ -142,16 +265,31 @@ algW ((App exp1 exp2), env, n)
           subV = unifier(s2t1, TyFunc t2 bnew)
           s = concatSub [subV, s2s1]
           t = subType subV bnew
-algW ((Lam name1 exp1), env, n) 
+{-algW ((Lam name1 exp1), env, n) 
     | areJust           = (Just (s1, t, n1 + 1))
     | otherwise         = Nothing
     where areJust = isJust (algW (exp1, envNewx, n+1))
-          (Just (s1, t1, n1)) = algW (exp1, envNewx, n+1)
-          envNewx = addTExpEnv (name1, bnew) envRx
           envRx = (removeNameEnv name1 env)
           bnew = freshType n
+          envNewx = addTExpEnv (name1, bnew) envRx
+          (Just (s1, t1, n1)) = algW (exp1, envNewx, n+1)
           subs1bnew = subType s1 bnew
-          t = TyFunc (subs1bnew) t1
+          t = TyFunc (subs1bnew) t1-}
+          
+-- algW ((Lam name1 exp1), env, n) =
+    -- let bnew = freshType n
+        -- envNewx = addTExpEnv (name1, bnew) (removeNameEnv name1 env)
+    -- in case algW (exp1, envNewx, n+1) of
+        -- Just (s1, t1, n1) -> Just (s1, TyFunc (subType s1 bnew) t1, n1 + 1)
+        -- Nothing           -> Nothing
+        
+algW ((Lam name1 exp1), env, n) = do
+    let bnew = freshType n
+    let env' = M.insert name1 bnew env
+    (s1, t1, n1) <- algW (exp1, env', n+1)
+    Just (s1, TyFunc (subType s1 bnew) t1, n1 + 1)
+
+  
           --(Just (s2,t2)) = algW (exp2, (applySubEnv s1 env), n?)
 algW (LitN numb1, env, n) = Just (Just [], TyInt,  n)
 algW (LitB bool1, env, n) = Just (Just [], TyBool, n)
@@ -268,7 +406,7 @@ algW (EvalA t1 exp0, env, n)            = case algW (exp0, env, n) of
     Just (s1, TyCodeUnP, n1)            -> Just (s1, t1, n1)
     Just (s1, TyCode tc, n1)            -> error (show tc)
     otherwise                           -> Nothing
-algW (Eval exp0, env, n)                = Nothing
+algW (EvalA t1 exp0, env, n)            = Nothing
 algW (LetDA name1 exp1 exp2, env, n) = case algW (exp1, env, n) of
     Nothing                             -> Nothing
     Just (s1, t1, n1)                   -> case algW (Var name1, applySubEnv s1 env, n1) of
@@ -487,45 +625,6 @@ concatSub ((Just s1):xs)    = case concatSub xs of
 
     
     
--- genCon :: State -> State
-
---creates the constraints from an expression given a state
--- createCon1 :: Expr -> State -> State
--- createCon1 (Var name1) st0 = st0 
--- createCon1 expLam@(Lam name1 exp1) st0@(exp0, env1, conL ,n) = st3
-    -- where [texpLam, tname1, texp1] = findTypeL  [expLam, (Var namex), exp1] st0
-          -- st1 = unionMK [(Var namex, texpvx)] $ removeExp (Var namex) st0
-          -- st2 = createCon1  exp1 st1
-          -- st3 = addCon [(texpLam, TyFunc tname1 texp1)] st2
--- createCon1 (expApp@(App expe expe')) st0 = st3
-    -- where [texpee', texpe, texpe'] = readTypeL  [expApp, expe, expe'] st0
-          -- st1 = createCon1 expe  st0      
-          -- st2 = createCon1 expe' st1
-          -- st3 = addCon [(texpe, TyFunc texpe' texpee')] st2
--- createCon1 (LitN numb1) st0 = st0
--- createCon1 (LitB bool1) st0 = st0
--- createCon1 expPrimUni@(PrimUni uniOp1 exp1) st0 = case uniOp1 of
-    -- Not         -> addCon [(exp1, TyBool), (expPrimUni, TyBool)] st1
-    -- otherwise   -> st0
-    -- where st1 = createCon1 exp1 st0
- 
--- createCon1 expPrimBin@(PrimBin binOp1 exp1 exp2) st0 = case elem binOp1 binOpBool of
-    -- True        -> addCon [(exp1, TyBool), (expPrimBin, TyBool)] st1
-    -- False       -> case elem binOp1 binOpInt of
-        -- True    -> addCon [(exp1, TyInt), (expPrimBin, TyInt)] st1
-        -- False   -> error "no such binary operation in PrimBin"
-    -- where st1 = createCon1 exp1 st0
-
--- createCon1 expIf@(If exp1 exp2 exp3) st0 = addCon [(exp1, TyBool), (exp2, TyVar "x"), (exp3, TyVar "x")] st0
-
--- readTypeL :: [Name] -> State -> [Maybe Type]
--- readTypeL [] (exp2, xs, xCon, n) = []
--- readTypeL [exp1] (exp2, Just xs, xCon, n) = [lookup exp1 xs]
--- readTypeL (exp1:expL) (exp2, Just xs, xCon, n) = ((lookup exp1 xs):(readTypeL expL (exp2, Just xs, xCon, n)))
--- readTypeL [exp1] (exp2, Nothing, xCon, n) = [Nothing]
--- readTypeL (exp1:expL) (exp2, Nothing, xCon, n) = (Nothing:(readTypeL expL (exp2, Nothing, xCon, n)))
-
-
 readTypeL :: [Name] -> State -> [Maybe Type]
 readTypeL [] (exp2, xs, n) = []
 readTypeL [exp1] (exp2, Just xs, n) = [lookup exp1 xs]
@@ -548,32 +647,13 @@ addTExpEnv texp1 Nothing = Nothing
 addTExpEnv texp1 (Just xs) = Just (texp1:xs)
     
         
---Substitute type1 for type2 in type3 = type3 [type1/type2]          
-subType :: Sub -> Type -> Type
-subType Nothing a                                   = a
-subType (Just []) a                                 = a
-subType (Just [(ts1, name1)]) TyInt                 = TyInt
-subType (Just [(ts1, name1)]) TyBool                = TyBool
-subType (Just [(ts1, name1)]) (TyVar var1)
-    | (name1 == var1)                               = ts1
-    | otherwise                                     = (TyVar var1)
-subType (Just [(ts1, name1)]) (TyVarRep var1)       = (TyVarRep var1)
-subType (Just [(ts1, name1)]) (TyFunc type1 type2)  = TyFunc (subType (Just [(ts1, name1)]) type1) (subType (Just [(ts1, name1)]) type2)
-subType (Just [(ts1, name1)]) (TyCodeUnP)           = TyCodeUnP
-subType (Just [(ts1, name1)]) (TyTag)               = TyTag
-subType (Just [(ts1, name1)]) (TyGenSym)            = TyGenSym
-subType sub1 (TyErrorEq)                            = TyErrorEq
-subType sub1 (TyError a b c)                        = TyError a b c
-subType sub1 (TyErrorLoop)                          = TyErrorLoop
-
-subType (Just (x:xs)) type1                         = subType (Just [x]) (subType (Just xs) type1)
     
-    
+-}    
     
     
     
 freshType :: Int -> Type
-freshType n = (TyVar ("Type" ++ show n++"{fresh}"))    
+freshType n = (TyVar ("TyVar" ++ show n++"{fresh}"))    
 
 freshVarRepName :: Int -> Name
 freshVarRepName n = ("freshGenSym"++ "{" ++ show n ++ "}")
