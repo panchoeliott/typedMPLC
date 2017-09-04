@@ -6,7 +6,6 @@ import SyntaxMPLC
 
 --List of terms and expected type and name or test (number possibly)
 
-
 tAll' = map annotateCT tAll
 
 tAll = tVar ++ tLam ++ tApp ++ tLitN ++ tLitB ++ tPrimUni ++ tPrimBin  ++ tIf  ++ tLet ++ tLetRec ++ tFact ++ tFib  ++ tMartin  ++ tRandom ++ tAST  ++ tEvalA ++ tLetDA
@@ -177,8 +176,8 @@ tyApp6 = TyInt
 tApp7 = (eApp7, rApp7CT, rApp7RT, rApp7CTRT, rApp7DL, rApp7UL ,rApp7ULDL, "tApp7")
 eApp7 = App (LitN 3) (LitN 4)
 rApp7CT = App (LitN 3) (LitN 4)
-rApp7RT = App (LitN 3) (LitN 4)
-rApp7CTRT = App (LitN 3) (LitN 4)
+rApp7RT = Error eApp7
+rApp7CTRT = Error eApp7
 rApp7DL = Error (DownA eApp7)
 rApp7UL = AST [ TagExpr TApp, AST [TagExpr TLitN, LitN 3],  AST [TagExpr TLitN, LitN 4]]
 rApp7ULDL =  eApp7
@@ -1423,99 +1422,27 @@ tyLetDA4 = TyCode
 stgPwr = (Lam "powX"         (AST [TagExpr TLam,     AST [TagExpr TVar,  AST [TagExpr TVarRep,VarRep "x"]],    (LetRec "pow" (Lam "count" (If (PrimBin Gt (Var "count") (LitN 1)) (AST [TagExpr (TPrimBin Mul),AST [TagExpr TVar, AST [TagExpr TVarRep, VarRep "x"]], App (Var "pow") (PrimBin Min (Var "count") (LitN 1))]) (AST [TagExpr TVar, AST [TagExpr TVarRep,VarRep "x"]]))) (App (Var "pow") (Var "powX")))])          )
 
 
--- ithnaryproj2 = 
--- Lam "i" 
--- (Lam "n"
-    -- (LetDA         
-        -- "ith"         
-        -- (AST [TagExpr TVar,  AST [TagExpr TVarRep, GenSym]])          
-        -- (LetRec "N"
-            -- (Lam "count"                             
-                -- (If                                     
-                    -- (PrimBin Lt (Var "count") (PrimBin Add (Var "n") (LitN 1)))                    
-                    -- (If                                             
-                        -- (PrimBin Eq (Var "count") (Var "i"))                        
-                        -- (AST [                            
-                            -- TagExpr TLam,
-                            -- (Var "ith"),                             
-                            -- App (Var "N") (PrimBin Add (Var "count") (LitN 1))                       
-                            -- ])                                            
-                        -- (AST [                            
-                            -- TagExpr TLam,
-                            -- AST [
-                                -- TagExpr TVar,                                 
-                                -- AST [                                    
-                                    -- TagExpr TVarRep,
-                                    -- GenSym                                    
-                                    -- ]                                
-                                -- ],                             
-                            -- App (Var "N") (PrimBin Add (Var "count") (LitN 1)) 
-                            -- ]
-                        -- )
-                    -- )
-                    -- (Var "ith")                            
-                -- )                     
-            -- )                    
-            -- (App (Var "N") (LitN 0))            
-        -- )
-    -- )
--- )
-
-
-inproj = (Lam "i" (Lam "n"    (Let                 "ith"                 (AST [TagExpr TVar,  AST [TagExpr TVarRep, GenSym]])                  (LetRec "N"            (Lam "count"                                             (If                                                         (PrimBin Lt (Var "count") (Var "n") )                                        (If                                                                     (PrimBin Eq (Var "count") (PrimBin Min (Var "i") (LitN 1)))                                                (AST [                                                        TagExpr TLam,                            (Var "ith"),                                                         App (Var "N") (PrimBin Add (Var "count") (LitN 1))                                                   ])                                                                    (AST [                                                        TagExpr TLam,                            AST [                                TagExpr TVar,                                                                 AST [                                                                        TagExpr TVarRep,                                    GenSym                                                                        ]                                                                ],                                                        App (Var "N") (PrimBin Add (Var "count") (LitN 1))                             ]                        ))(Var "ith")                            )                     )                    (App (Var "N") (LitN 0))            ))))
-inprojtest = Lam "ip" (Lam "np" (LetDA "i" (Var "ip") (LetDA "n" (Var "np") (LetDA "ith" (Var "iTH") (LetRec "N" (Lam "count" (If (PrimBin Eq (LitN 3) (Var "n")) (Var "ith") (App (Var "N") (LitN 3)))) (App (Var "N") (LitN 5)))))))
--- ithnaryproj = 
--- Lam "i" 
--- (Lam "n"
-    -- (LetDA         
-        -- "ith"         
-        -- (AST [TagExpr TVar,  AST [TagExpr TVarRep, GenSym]])          
-        -- (LetRec "N"
-            -- (Lam "count"                             
-                -- (If                                     
-                    -- (PrimBin Gt (Var "count") (LitN 0))                    
-                    -- (If                                             
-                        -- (PrimBin Eq (Var "count") (Var "i"))                        
-                        -- (AST [                            
-                            -- TagExpr TLam,
-                            -- (Var "ith"),                             
-                            -- App (Var "N") (PrimBin Min (Var "count") (LitN 1))                       
-                            -- ])                                            
-                        -- (AST [                            
-                            -- TagExpr TLam,
-                            -- AST [
-                                -- TagExpr TVar,                                 
-                                -- AST [                                    
-                                    -- TagExpr TVarRep,
-                                    -- GenSym                                    
-                                    -- ]                                
-                                -- ],                             
-                            -- App (Var "N") (PrimBin Min (Var "count") (LitN 1)) 
-                            -- ]
-                        -- )
-                    -- )
-                    -- (Var "ith")                            
-                -- )                     
-            -- )                    
-            -- (App (Var "N") (Var "n"))            
-        -- )
-    -- )
--- )
-
-
-oo12 = Lam "x1" (Lam "x2" (Var "x1"))
-
--- oo12UL = AST [TagExpr TLam,AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x1"]],AST [TagExpr TLam,AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x2"]],AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x1"]]]]
-
-
-
-oo14 = Lam "x1" (Lam "x2" (Lam "x3" (Lam "x4" (Var "x1"))))
--- 4oo8 = Lam "x1" (Lam "x2" (Lam "x3" (Lam "x4" (Lam "x5" (Lam "x6" (Lam "x7" (Lam "x8" (Var "x4"))))))))
 
 
 
 
-ithnaryproj' = Lam "i" (Lam "n"     (LetRec "N"         (Lam "count"             (If                 (PrimBin Gt (Var "count") (LitN 1))                 (If                     (PrimBin Eq (Var "count") (Var "i"))                    (LetDA "ith" GenSym (AST [TagExpr TLam, AST [TagExpr TVar,  AST [TagExpr TVarRep, (Var "ith")]], App (Var "N") (PrimBin Min (Var "count") (LitN 1))]))                    (AST [TagExpr TLam, AST [TagExpr TVar, AST [TagExpr TVarRep, GenSym]], App (Var "N") (PrimBin Min (Var "count") (LitN 1))])                )                (AST [TagExpr TVar, AST [TagExpr TVarRep, (Var "ith")]])            )         )        (App (Var "N") (Var "n"))    ))
+inproj = Lam "i" (Lam "n" (LetDA "ith" (AST [TagExpr TVar,AST [TagExpr TVarRep,GenSym]]) (LetRec "N" (Lam "count" (If (PrimBin Lt (Var "count") (Var "n")) (If (PrimBin Eq (Var "count") (PrimBin Min (Var "i") (LitN 1))) (AST [TagExpr TLam,Var "ith",App (Var "N") (PrimBin Add (Var "count") (LitN 1))]) (AST [TagExpr TLam,AST [TagExpr TVar,AST [TagExpr TVarRep,GenSym]],App (Var "N") (PrimBin Add (Var "count") (LitN 1))])) (Var "ith"))) (App (Var "N") (LitN 0)))))
+
+inprotest1 = (App (App inproj (LitN 4)) (LitN 4)) -- should produce the code for \ x1. \x2. \x3 .\x4 .x4
+    
+inprotest2 = (App (App inproj (LitN 2)) (LitN 4)) -- should produce the code for \ x1. \x2. \x3 .\x4 .x4
+    
+inprotest3 = (App (App inproj (LitN 6)) (LitN 14)) -- should produce the code for \ x1. \x2. \x3 .\x4 .x4
+    
+
+
+
+
+
+
+
+
+
 
 
 

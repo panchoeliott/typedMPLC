@@ -100,7 +100,6 @@ evalFCCT (t, n) = case t of
         case areNotError [e1', e2', exp3] of
             True                        -> (exp', n')
             False                       -> (Error exp', n')
-
     Let nm1 e1 e2 ->
         let ([e1', e2'], n')            = evalFCCTList ([e1, e2], n) 
             exp'                        = Let nm1  e1' e2'    in
@@ -174,39 +173,31 @@ evalFCRT :: (Expr, FreshCounter)    -> (Expr, FreshCounter)
 evalFCRT (t, n) = case t of 
     VarRep nm1                      -> (VarRep nm1, n)
     Var x                           -> (Var x, n)
---LAM RT (neta reduction)
     Lam x e1  -> 
         let (e1', n')               = (evalFCRT (e1, n))  in
         case isNotError e1' of        
         True                        -> (Lam x e1', n')
-        False                       -> (Error (Lam x (Error e1)), n')
-    
---APP RT (beta reduction)
--- evalFCRT (App e1 e2, n )        = case (e1, e2) of    
-    -- ((Lam x eM), (eN))          -> do evalFCRT (sub (eN, x) (eM, n''))
-    -- other                       -> case (e1', e2') of
-        -- ((Lam x eM), eN)        -> do evalFCRT (sub (eN, x) (eM, n''))
-        -- otherwise               -> ((App e1' e2'), n'')
-    -- where (e1', n')             = evalFCRT (e1, n)
-          -- (e2', n'')            = evalFCRT (e2, n')
+        False   -> case isNotError e1 of
+            True                    -> (Lam x e1, n)
+            False                   -> (Error (Lam x (Error e1)), n')
     App e1 e2   ->
-        let (e1', n')               = evalFCRT (e1, n)
-            (e2', n'')              = evalFCRT (e2, n') in 
-        case (e1', e2') of    
-        ((Lam x eM), eN )           -> evalFCRT (sub (eN, x) (eM, n''))
-        (e1', e2') | not $ areNotError [e1', e2'] ->
-            case (e1, e2) of
-                (Lam x eM, eN)      -> evalFCRT (sub (eN, x) (eM, n''))
-        -- (Error e1, e2')             -> case (e1, e2) of
-            -- ((Lam x eM), eN)        -> case evalFCRT (sub (eN, x) (eM, n'')) of
-                -- (Error eM', n''')   -> evalFCRT (sub (eN, x) (eM, n'')) 
-                -- (exp, m) | not (hasError exp)    -> (exp, m)
-                -- (other, m)          -> (Error other, m)
-            -- otherwise               -> (Error (App e1 e2), n'')
-        -- (e1' , Error e2)            -> case (e1, e2) of
-            -- ((Lam x eM), eN)        -> evalFCRT (sub (eN, x) (eM, n''))
-            -- otherwise               -> (Error (App e1 e2), n'')
-        ((eM), (eN))                -> (App eM eN, n'')
+        case e1 of
+            Lam x eM    -> case isNotError eM of
+                True                -> evalFCRT (sub (e2, x) (eM, n))
+                False               ->  
+                    let (e1', n')   = evalFCRT (e1, n) in
+                    case e1' of
+                        Lam x' eM'  -> case isNotError eM' of
+                            True    -> evalFCRT (sub (e2, x') (eM', n'))
+                            False   -> (Error (App e1' e2), n')
+            e1 | isNotApp e1 -> (Error t, n)
+            otherwise ->
+                let (e1', n')   = evalFCRT (e1, n) in
+                case e1' of
+                    Lam x' eM'      -> case isNotError eM' of
+                        True        -> evalFCRT (sub (e2, x') (eM', n'))
+                        False       -> (Error (App e1' e2), n')
+                    otherwise       -> ((App e1 e2), n)
     LitN numb                       -> (LitN numb, n)
     LitB bool                       -> (LitB bool, n)
     PrimUni Not e1  -> 
@@ -221,7 +212,6 @@ evalFCRT (t, n) = case t of
         case areNotError [e1', e2'] of  
             True                    -> evalPrimBin (PrimBin binOp e1' e2', n')
             False                   -> (Error (PrimBin binOp e1' e2'), n')
-    
     If bool1 e1 e2 ->  
         let (bool1', n')            = evalFCRT (bool1, n)  
             trueNotError            = (isBoolT bool1') && (areNotError [bool1', e1])
@@ -235,20 +225,6 @@ evalFCRT (t, n) = case t of
         case areNotError [e1, e2] of
             True                    -> evalFCRT (sub (e1, nm1) (e2, n))--uses sub
             False                   -> (Error (Let nm1 e1 e2), n)
--- evalFCRT (exp0@(LetRec nm1 e1 e2), n)
-    -- | loopsIndefiniedtly            = (ErrorLoop exp0, n)
-    -- | notError && noSub             = (e2, n) 
-    -- | notError                      = evalFCRT (sub (e1, nm1) (e2',n'))
-    -- | otherwise                     = (Error exp0, n)
-    -- where loopsIndefiniedtly        = (lengthExpr exp0) >= limitx 
-          -- (e2', n')             = evalFCRT (e2, n)
-          -- noSub                     = exp0 == (fst $ evalFCRT (sub (e1, nm1) (e2',n')))
-          -- notError                  = areNotError [e1, e2']
--- evalFCRT (exp0@(LetRec nm1 e1 e2), n)
-    -- | loopsIndefiniedtly            = (ErrorLoop exp0, n)
-    -- | otherwise                     = evalFCRTLetRec (exp0, n)
-    -- where (newLetRec, n')         = (evalFCRTLetRec (exp0, n))
-          -- loopsIndefiniedtly        = areNotError [e1, e2] && lengthExpr newLetRec >= limitx 
     LetRec nm1 e1 e2 ->
         let (t', n')                = evalFCRTLetRec (t, n)  
             growingLoopLimit        = areNotError [e1, e2] && lengthExpr t' > limitx 
@@ -278,9 +254,8 @@ evalFCRT (t, n) = case t of
         case isNotError e1' && typeExp e1' == Just t1 of
             True                    -> evalFCRT (e1', n')
             False                   -> (Error e1', n')
-    
 -- --LIFT RT
--- evalFCRT (Lift e1, n) = case e1 of
+    -- Lift e1 -> case e1 of
     -- VarRep nm1             -> (AST [(TagExpr TVarRep), VarRep nm1], n)
     -- Var nm1                -> (AST [(TagExpr TVar), VarRep nm1], n)
     -- Lam nm1 e1           -> (AST [TagExpr TLam, n'm1, e1'], n')
@@ -328,16 +303,6 @@ evalFCRTLetRec (exp0@(LetRec nm1 e1 e2), n)
           largeLoop                 = areNotError [e1, e2] && ((lengthExpr newLetRec) >= limitx)
           stationaryLoop            = areNotError [e1, e2] && newLetRec == exp0
           otherLoop                 = areNotError [e1, e2]
-    -- -- --maybe require alpha equivalence rather than just equivalence         
- -- evalFCRTLetRec (exp0@(LetRec nm1 e1 e2), n) 
-    -- | loopsIndefiniedtly            = (ErrorLoop exp0, n)
-    -- | notError && noSub             = (e2, n) 
-    -- | notError                      = evalFCRT (sub (exp0, nm1) (e2',n'))
-    -- | otherwise                     = (Error exp0, n)
-    -- where loopsIndefiniedtly        = areNotError [e1, e2] && (lengthExpr exp0) >= limitx 
-          -- (e2', n')             = evalFCRT (e2, n)
-          -- noSub                     = exp0 == (fst $ evalFCRT (sub (exp0, nm1) (e2',n')))
-          -- notError                  = areNotError [e1, e2']
 evalFCRTLetRec (other, n)           = (Error other, n)       
 
  
@@ -527,67 +492,68 @@ evalFCUL (t, n) =
             let (ulList, n')    = evalFCULList ([Var nm1, e1], n) in 
             case areNotError ulList of
                 True            -> (AST ((TagExpr TLam):ulList), n')
-                False           -> (Error (UpA (Lam nm1 e1)), n)
+                False           -> (Error (UpA t), n)
         App e1 e2           ->
             let (ulList, n')    = evalFCULList ([e1, e2], n) in
             case areNotError ulList of
                 True            -> (AST ((TagExpr TApp):ulList), n')
-                False           -> (Error (UpA (App e1 e2)), n)
+                False           -> (Error (UpA t), n)
         LitN int1               -> (AST [TagExpr TLitN, LitN int1], n)
         LitB bool1              -> (AST [TagExpr TLitB, LitB bool1], n)
         PrimUni uniOp1 e1   -> 
             let ([ule1], n')    = evalFCULList ([e1], n) in
             case areNotError [ule1] of
                 True            -> (AST [TagExpr (TPrimUni uniOp1), ule1], n')
-                False           -> (Error (UpA (PrimUni uniOp1 e1)), n) 
+                False           -> (Error (UpA t), n) 
         PrimBin binOp1 e1 e2 -> 
             let (ulList, n')    = evalFCULList ([e1, e2], n) in
             case areNotError ulList of
                 True            -> (AST ((TagExpr (TPrimBin binOp1)):ulList), n')
-                False           -> (Error (UpA (PrimBin binOp1 e1 e2)), n) 
+                False           -> (Error (UpA t), n) 
         If bool1 e1 e2      -> 
             let (ulList, n')    = evalFCULList ([bool1, e1, e2], n) in
             case areNotError ulList of
                 True            -> (AST ((TagExpr TIf):ulList), n')
-                False           -> (Error (UpA (If bool1 e1 e2)), n) 
+                False           -> (Error (UpA t), n) 
         Let nm1 e1 e2       ->
             let (ulList, n')    = evalFCULList ([Var nm1, e1, e2], n) in
             case areNotError ulList of
                 True            -> (AST ((TagExpr TLet):ulList), n')
-                False           -> (Error (UpA (Let nm1 e1 e2)), n) 
+                False           -> (Error (UpA t), n) 
         LetRec nm1 e1 e2    ->
             let (ulList, n')    = evalFCULList ([Var nm1, e1, e2], n) in
             case areNotError ulList of
                 True            -> (AST ((TagExpr TLetRec): ulList), n')
-                False           -> (Error (UpA (LetRec nm1 e1 e2)), n)
-        AST []                  -> (Error (UpA (AST [])), n)
+                False           -> (Error (UpA t), n)
+        AST []                  -> (Error (UpA t), n)
         AST expL -> 
             let (ulexpL, n')    = evalFCULList (expL, n) in 
             case areNotError ulexpL of 
                 True            -> (AST ((TagExpr TPromote) :  ulexpL), n')
-                False           -> (Error (UpA (AST expL)), n) 
+                False           -> (Error (UpA t), n) 
         GenSym                  -> (AST [TagExpr TGenSym], n)
         DownA  e1 ->  
             let (dle1, n'')     = evalFCDL (e1, n)
                 (uldle1, n')    = evalFCUL (dle1, n'') in 
             case areNotError [uldle1] of    
                 True            -> (uldle1, n')
-                False           ->(Error (UpA (DownA  e1)), n) 
+                False           ->(Error (UpA t), n) 
         UpA e1 ->
             case areNotError [e1] of
                 True            -> evalFCUL $ evalFCUL (e1, n)
-                False           -> (Error (UpA (UpA e1)), n) 
+                False           -> (Error (UpA t), n) 
         EvalA t1 e1 ->
             let (ule1, n')      = evalFCUL (e1, n) in
             case areNotError [e1] of
                 True            -> (AST [TagExpr (TEvalA t1), ule1], n')
-                False           -> (Error (UpA (EvalA t1 e1)), n)
--- evalFCUL (Lift e1, n) = (AST [TagExpr TLift, ule1], n')
-    -- where (ule1, n') = evalFCUL (e1, n) 
-        LetDA nm1 e1 e2 ->
-            case areNotError [e1, e2] of
-                True            -> (Error (UpA (LetDA  nm1 e1 e2)), n)
-                False           -> (Error (UpA (LetDA nm1 e1 e2)), n) 
+                False           -> (Error (UpA t), n)
+        -- Lift e1  ->
+            -- let (ule1, n') = evalFCUL (e1, n) in 
+            -- case areNotError [e1] of
+                -- True            -> (AST [TagExpr TLift, ule1], n')
+                -- False           -> (Error (UpA t), n)
+                -- ((AST [TagExpr TLift, ule1], n')
+        LetDA nm1 e1 e2         -> (Error (UpA t), n) 
         TagExpr tag             -> (TagExpr tag, n)
         Error e1                -> (Error (UpA e1), n)
         ErrorLoop e1            -> (ErrorLoop (UpA e1), n)
@@ -608,38 +574,7 @@ evalFCULList ((x:xs), n) = ((newx:newxs), n'')
           
           
           
-      
 
-
-
-
-          
-          
-          
-          
-          
-          
-          
-          
-          
-          
-          
-          
-          
-          
-          
-          
-          
-          
-          
-          
-          
-          
-          
-          
-          
-          
-          
     
 
 --Substitution function:
@@ -724,10 +659,6 @@ subListExp sub1 ([], n)     =  ([], n)
 subListExp sub1 ((x:xs), n) = ((newx:newxs), n')
     where (newx, n'')     = (sub sub1 (x, n))
           (newxs, n')     = (subListExp sub1 (xs, n''))
-    
-    --test:
-    --sub (Var "r", "m") (Lam "r" (Var "m"), 1)
-    -- sub (Var "p", "m") (sub (Var "r", "m") (Lam "r" (Lam "p" (Var "m")), 1))
 
 
 
@@ -778,11 +709,35 @@ isInt _         = False
 
 
 isError :: Expr -> Bool
-isError (Error e1)      = True
-isError (ErrorLoop e1)  = True
-isError _               = False
+isError (Lam x e)           = isError e
+isError (App e e')          = isError e || isError e'
+isError (PrimUni u e)       = isError e 
+isError (PrimBin b e e')    = isError e || isError e'
+isError (If b e e')         = isError b || isError e || isError e'
+isError (Let x e e')        = isError e || isError e'
+isError (LetRec x e e')     = isError e || isError e'
+isError (AST x)           = or $ map isError x
+isError (DownA e)           = isError e 
+isError (UpA e)             = isError e 
+isError (EvalA t e)         = isError e 
+isError (LetDA x e e')      = isError e || isError e'
+isError (Error e1)          = True
+isError (ErrorLoop e1)      = True
+isError _                   = False
 
 isNotError :: Expr -> Bool
+isNotError (Lam x e)        = isNotError e
+isNotError (App e e')       = isNotError e || isNotError e'
+isNotError (PrimUni u e)    = isNotError e 
+isNotError (PrimBin b e e') = isNotError e || isNotError e'
+isNotError (If b e e')      = isNotError b || isNotError e || isNotError e'
+isNotError (Let x e e')     = isNotError e || isNotError e'
+isNotError (LetRec x e e')  = isNotError e || isNotError e'
+isNotError (AST x)        = or $ map isNotError x
+isNotError (DownA e)        = isNotError e 
+isNotError (UpA e)          = isNotError e 
+isNotError (EvalA t e)      = isNotError e 
+isNotError (LetDA x e e')   = isNotError e || isNotError e'
 isNotError (Error e1)       = False
 isNotError (ErrorLoop e1)   = False
 isNotError _                = True
@@ -818,26 +773,26 @@ isNotBool e1 = case e1 of
 
 isNotInt :: Expr -> Bool
 isNotInt e1 = case e1 of
-    VarRep nm1                -> True
-    Var nm1                   -> False
+    VarRep nm1              -> True
+    Var nm1                 -> False
     Lam nm1 e1              -> True
     App e1 e2               -> False
-    LitB bool                   -> True
-    LitN numb                   -> False
-    PrimUni Not e1            -> True
+    LitB bool               -> True
+    LitN numb               -> False
+    PrimUni Not e1          -> True
     -- PrimUni a e1           -> True
     PrimBin binOp1 e1 e2    -> notElem binOp1 [Add, Mul, Min, Div] 
     If e1 e2 exp3           -> False
-    Let nm1 e1 e2         -> False
-    LetRec nm1 e1 e2      -> False
-    AST xs                      -> True
-    GenSym                      -> False
-    DownA e1                  -> False
-    UpA e1                    -> True
-    EvalA t1 e1               -> False
-    TagExpr tag1                -> True
-    Error e1                  -> True
-    ErrorLoop e1              -> True
+    Let nm1 e1 e2           -> False
+    LetRec nm1 e1 e2        -> False
+    AST xs                  -> True
+    GenSym                  -> False
+    DownA e1                -> False
+    UpA e1                  -> True
+    EvalA t1 e1             -> False
+    TagExpr tag1            -> True
+    Error e1                -> True
+    ErrorLoop e1            -> True
     -- other                    -> False
     
 
@@ -874,13 +829,34 @@ isValue (TagExpr tag1)          = False
 isValue (Error e1)              = False   
 isValue (ErrorLoop e1)          = False    
     
+--checks whether an expression is a value or just an expression.    
+isNotApp :: Expr -> Bool
+isNotApp e = case e of
+    (Var nm1)               -> False
+    (Lam nm1 e1)            -> False
+    (App e1 e2)             -> False
+    (LitN int1)             -> True
+    (LitB bool1)            -> True
+    (PrimUni not1 bool1)    -> True
+    (PrimBin binOp1 a1 a2)  -> True
+    (If bool1 e1 e2)        -> False
+    (Let nm1 e1 e2)         -> False
+    (LetRec nm1 e1 e2)      -> False
+    (AST e1)                -> True
+    GenSym                  -> True
+    (DownA e1)              -> False
+    (UpA e1)                -> False
+    (EvalA t1 e1)           -> False
+    -- (Lift e1)              -> True??????????????????
+    (LetDA nm1 e1 e2)       -> False
+    (TagExpr tag1)          -> True
+    (Error e1)              -> True
+    (ErrorLoop e1)          -> True    
+    
    
 
    
 -- Test:    
-
--- testFalseAll ::[(String, Bool)]
--- testFalseAll = testFalseRT ++ testFalseCT ++ testFalseULDL
 
 
 newTest1 :: (Expr, Expr, Expr, Expr, Expr, Expr, Expr, String) -> (String, Bool, Bool, Bool, Bool, Bool, Bool, Bool)
@@ -894,7 +870,6 @@ newTest xs = map newTest1 xs
 
 testAnyFalse (s, b1, b2, b3, b4, b5, b6, b7) = not $ and [b1, b2, b3, b4, b5, b6, b7]
 
-
 filterAll = filter testAnyFalse (newTest ALL.tAll)
 filterAST = filter testAnyFalse (newTest ALL.tAST)
 
@@ -902,18 +877,26 @@ filterAST = filter testAnyFalse (newTest ALL.tAST)
 
 filterFalse ::  [(String, Bool)] ->  [(String, Bool)]
 filterFalse = filter (\(str, bool) -> (bool == False))
-
--- testEvalSingleTripleCT :: (Expr, Expr, String) -> (String, Bool)
--- testEvalSingleTripleCT (e1, r1, str1) 
-    -- | evalCTe1 == r1                    = (str1, True)
-    -- | length (show evalCTe1) > limitx   = ("Loops " ++ str1, False)
-    -- | evalCTe1 /= r1                    = (str1, False)
-    -- -- | otherwise = error
-    -- where evalCTe1 = evalCT e1    
-    
--- testEval :: [TestTriple] -> (Expr -> Expr) -> [(String, String, String)]
--- testEval testtriple evalPro = map (\(x, y, z) -> (z, show y, show $ evalPro y)) testtriple
-    
+  
 testValueList :: [TestTriple] -> [(String, Bool)]
 testValueList xs = map (\(e, r, st) -> (st, isValue r)) xs    
     
+    
+    
+    
+ --Testing Typing:
+    
+ 
+checkTy :: (TestList, Type) ->  Bool
+checkTy ((a1, a2, a3, a4, a5, a6, a7, a8), t1) = case typeExpCT a2 of 
+    Just ty1 | ty1 == t1        -> False
+    Just ty1 | ty1 /= t1        -> True
+    Nothing  | containsError t1 -> False
+    Nothing                     -> True
+ 
+ 
+filterAllTy :: [(TestList, Type)] -> [(String, Expr, Maybe Type, Type)]
+filterAllTy (x:xs)  = map (\((a1, a2, a3, a4, a5, a6, a7, a8), t1) -> (a8, a1, typeExpCT a2, t1)) $ filter checkTy (x:xs)
+     
+filtTyAll = filterAllTy ALL.typedAll
+ 

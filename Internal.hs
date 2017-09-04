@@ -1,14 +1,12 @@
 module Internal where
 
-import EvalMPLC
 import SyntaxMPLC 
-import TestALL as ALL
--- import TypeChecker as TC
+import EvalMPLC
 import TypeCheckerUnParam 
-import TestAlgW
+import TestALL as ALL
 import Data.List
 import Data.Maybe
-import System.IO  
+-- import System.IO  
 
 
 
