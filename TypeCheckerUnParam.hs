@@ -90,19 +90,18 @@ genCon' exp (st@(exp00, env, n)) = case exp of
     (AST list1)                 ->
         let (list1', n') = genConL list1 st
             clist1' = concat $ fst $ unzip list1' ------ ????????????????
-        in  (clist1', TyCodeUnP, n')    
+        in  (clist1', TyCode, n')    
     (VarRep nm1)                -> ([], TyVarRep, n)
     GenSym                      -> ([], TyVarRep, n)
     (DownA e1) -> 
         let (ce1, te1, n') = genCon' e1 st 
-        in                      (ce1 ++ [(te1, TyCodeUnP)], TyErrorExpr exp, n')
-        
+        in                      (ce1 ++ [(te1, TyCode)], TyErrorExpr exp, n')    
     (UpA e1) -> 
         let (ce1, te1, n') = genCon' e1 st 
         in                      (ce1, TyErrorExpr exp, n')
     (EvalA t1 e1) -> 
         let (ce1, te1, n') = genCon' e1 st 
-        in                      (ce1 ++ [(te1, TyCodeUnP)], t1, n')
+        in                      (ce1 ++ [(te1, TyCode)], t1, n')
     (LetDA nm1 e1 e2)     -> 
         let ([(ce1, te1), (ce2, te2)], n') = genConL [e1, e2] st
         in  (ce1 ++ ce2 ++ [(env M.! nm1, te1)], TyError exp te2 te2, n')   
@@ -150,7 +149,7 @@ unifyCon constr = case constr of
                 False                   -> case unifyCon (subCon (Just [(t, x)]) rest) of 
                     Nothing         -> Nothing
                     (Just subRest)  -> Just (subRest ++ [(t, x)])             
-        (TyCodeUnP, TyCodeUnP)      -> unifyCon rest
+        (TyCode, TyCode)      -> unifyCon rest
         (TyTag, TyTag)              -> unifyCon rest
         -- (t, TyVar x)                -> case occursIn x t of
             -- True                    -> Nothing
@@ -382,18 +381,18 @@ algW ((LetRec name1 exp1 exp2), env, n)
           s                     = concatSub [s2, s1]
           t                     = t2
 
-algW (AST [], env, n)           = Just (Nothing, TyError (AST []) (TyCodeUnP) TyTag, n)
-algW (AST (x:xs), env, n)       = Just (sl, TyCodeUnP, nl)
+algW (AST [], env, n)           = Just (Nothing, TyError (AST []) (TyCode) TyTag, n)
+algW (AST (x:xs), env, n)       = Just (sl, TyCode, nl)
     where (st1@(Just (s1, t1, n1)):stL) = algWList xs (x, env, n)      
           Just (sl, tl, nl)             = last stL 
           
 algW (UpA exp1, env, n) = case algW (exp1, env, n) of
     Nothing             -> Just (Nothing, TyError exp1 TyErrorEq TyErrorEq, n)
-    Just (s1, t1, n1)   -> Just (s1, TyCodeUnP, n1)
+    Just (s1, t1, n1)   -> Just (s1, TyCode, n1)
 algW (DownA exp1, env, n) = case algW (exp1, env, n) of
     Nothing             -> Just (Nothing, TyError exp1 TyErrorEq TyErrorEq, n)
-    Just (s1, TyCodeUnP, n1)    -> algW ((\(a1,a3) -> (a1, env, a3)) (evalFCRT (evalFCCT (DownA exp1, n))))
-    Just (s1, t1, n1)           -> Just (s1, TyError exp1 t1 (TyCodeUnP), n1)
+    Just (s1, TyCode, n1)    -> algW ((\(a1,a3) -> (a1, env, a3)) (evalFCRT (evalFCCT (DownA exp1, n))))
+    Just (s1, t1, n1)           -> Just (s1, TyError exp1 t1 (TyCode), n1)
         
         
 algW (VarRep x, env, n)      
@@ -403,7 +402,7 @@ algW (GenSym, env, n)                   = Just (Just [], TyGenSym, n)
 algW (TagExpr tag1, env, n)             = Just (Just [], TyTag, n)          
 algW (EvalA t1 exp0, env, n)            = case algW (exp0, env, n) of 
     Nothing                             -> Nothing
-    Just (s1, TyCodeUnP, n1)            -> Just (s1, t1, n1)
+    Just (s1, TyCode, n1)            -> Just (s1, t1, n1)
     Just (s1, TyCode tc, n1)            -> error (show tc)
     otherwise                           -> Nothing
 algW (EvalA t1 exp0, env, n)            = Nothing
@@ -426,7 +425,7 @@ areTyCode []        = True
 areTyCode (Nothing:xs) = False
 areTyCode ((Just (s1, t1, n)):xs) = case t1 of
     TyCode type1    -> True && (areTyCode xs)
-    TyCodeUnP       -> True && (areTyCode xs)
+    TyCode       -> True && (areTyCode xs)
     otherwise       -> False
     
 fromTyCode :: [Type] -> Maybe [Type]
@@ -464,7 +463,7 @@ fromTyCode (x:xs) = case x of
 
 algWAST :: (Expr, Env, Int) -> SubType
 algWAST (AST [], env, n)            = Just (Nothing, TyError (AST []) TyErrorEq TyTag, n)
-algWAST (AST (x:xs) , env, n)       = Just (sl, TyCodeUnP, nl)
+algWAST (AST (x:xs) , env, n)       = Just (sl, TyCode, nl)
     where (st1@(Just (s1, t1, n1)):stL) = algWList xs (x, env, n)      
           Just (sl, tl, nl) = last stL 
           
@@ -571,7 +570,7 @@ allTypeVar (TyVarRep name1)             = [name1]
 allTypeVar TyInt                        = []
 allTypeVar TyBool                       = []
 allTypeVar (TyFunc type1 type2)         = union (allTypeVar type1) (allTypeVar type2)
-allTypeVar (TyCodeUnP)                  = []
+allTypeVar (TyCode)                  = []
 allTypeVar (TyTag)                      = []
 allTypeVar (TyGenSym)                   = []
 allTypeVar (TyErrorEq)                  = []
@@ -594,8 +593,8 @@ dft (Just (TyFunc ty1 ty2, TyVarRep a))     = Just (TyFunc ty1 ty2, TyVarRep a)
 dft (Just (TyFunc ty1 ty2, TyFunc ty3 ty4)) 
     | (ty1 == ty3)                          = dft (Just (ty2, ty4))
     | otherwise                             = dft (Just (ty1, ty3))
-dft (Just (TyCodeUnP, t1))                  = Just (TyCodeUnP, t1)
-dft (Just (t1, TyCodeUnP))                  = Just (t1, TyCodeUnP)
+dft (Just (TyCode, t1))                  = Just (TyCode, t1)
+dft (Just (t1, TyCode))                  = Just (t1, TyCode)
 dft (Just (TyErrorEq, _))                   = Nothing
 dft (Just (a, TyErrorEq))                   = Nothing
 dft (Just (TyError _ _ _, _))               = Nothing

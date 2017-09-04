@@ -760,7 +760,7 @@ rtLet12CTRT = AST [TagExpr (TPrimBin Add),AST [TagExpr TVar,AST [TagExpr TVarRep
 rtLet12DL = Error (DownA eLet12)
 rtLet12UL = AST [TagExpr TLet,AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x"]],AST [TagExpr TLitN,LitN 3],AST [TagExpr TPromote,TagExpr (TPrimBin Add),AST [TagExpr TPromote,TagExpr TVar,AST [TagExpr TPromote,TagExpr TVarRep,AST [TagExpr TVarRep,VarRep "x"]]],AST [TagExpr TPromote,TagExpr TVar,AST [TagExpr TPromote,TagExpr TVarRep,AST [TagExpr TVarRep,VarRep "x"]]]]]
 rtLet12ULDL = Let "x" (LitN 3) (AST [TagExpr (TPrimBin Add),AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x"]],AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x"]]])
-tyLet12 = TyCodeUnP
+tyLet12 = TyCode
 
 
 
@@ -868,12 +868,12 @@ tyLetRec9 = TyInt
 tLetRec10 =(eLetRec10, rtLetRec10CT, rtLetRec10RT, rtLetRec10CTRT, rtLetRec10DL, rtLetRec10UL ,rtLetRec10ULDL, "tLetRec10")
 eLetRec10 = LetRec "x" (UpA (LitN 3)) (UpA (PrimBin Add (Var "x") (LitN 3)))
 rtLetRec10CT = LetRec "x" (AST [TagExpr TLitN,LitN 3]) (AST [TagExpr (TPrimBin Add),AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x"]],AST [TagExpr TLitN,LitN 3]])
-rtLetRec10RT = Error (LetRec "x" (Error (UpA (LitN 3))) (Error (UpA (PrimBin Add (Var "x") (LitN 3)))))
+rtLetRec10RT = Error (Error (LetRec "x" (Error (UpA (LitN 3))) (Error (UpA (PrimBin Add (Var "x") (LitN 3))))))
 rtLetRec10CTRT =AST [TagExpr (TPrimBin Add),AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x"]],AST [TagExpr TLitN,LitN 3]]
 rtLetRec10DL = Error (DownA eLetRec10)
 rtLetRec10UL = AST [TagExpr TLetRec,AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x"]],AST [TagExpr TPromote,TagExpr TLitN,AST [TagExpr TLitN,LitN 3]],AST [TagExpr TPromote,TagExpr (TPrimBin Add),AST [TagExpr TPromote,TagExpr TVar,AST [TagExpr TPromote,TagExpr TVarRep,AST [TagExpr TVarRep,VarRep "x"]]],AST [TagExpr TPromote,TagExpr TLitN,AST [TagExpr TLitN,LitN 3]]]]
 rtLetRec10ULDL = rtLetRec10CT
-tyLetRec10 = TyCodeUnP
+tyLetRec10 = TyCode
 
 tLetRec11 =(eLetRec11, rtLetRec11CT, rtLetRec11RT, rtLetRec11CTRT, rtLetRec11DL, rtLetRec11UL ,rtLetRec11ULDL, "tLetRec11")
 eLetRec11 = LetRec "x" (LitN 3) (LetRec "y" (LitN 8) (PrimBin Mul (Var "x") (Var "y")))
@@ -969,7 +969,7 @@ tyLetRecFactx = TyFunc TyInt TyInt
 tLetRecFactTrue = (eLetRecFactTrue, rtLetRecFactTrueCT, rtLetRecFactTrueRT, rtLetRecFactTrueCTRT, rtLetRecFactTrueDL, rtLetRecFactTrueUL ,rtLetRecFactTrueULDL, "tLetRecFactTrue")
 eLetRecFactTrue = App eLetRecFactx (LitB True)
 rtLetRecFactTrueCT     = App (Lam "y" (LetRec "x" (Lam "n" (If (PrimBin Or (PrimBin Lt (Var "n") (LitN 1)) (PrimBin Eq (Var "n") (LitN 0))) (LitN 1) (PrimBin Mul (Var "n") (App (Var "x") (PrimBin Min (Var "n") (LitN 1)))))) (App (Var "x") (Var "y")))) (LitB True)
-rtLetRecFactTrueRT     = Error (LetRec "x" (Lam "n" (If (PrimBin Or (PrimBin Lt (Var "n") (LitN 1)) (PrimBin Eq (Var "n") (LitN 0))) (LitN 1) (PrimBin Mul (Var "n") (App (Var "x") (PrimBin Min (Var "n") (LitN 1)))))) (Error (If (Error (PrimBin Or (Error (PrimBin Lt (LitB True) (LitN 1))) (Error (PrimBin Eq (LitB True) (LitN 0))))) (LitN 1) (PrimBin Mul (LitB True) (App (Var "x") (PrimBin Min (LitB True) (LitN 1)))))))
+rtLetRecFactTrueRT     = Error ( Error (LetRec "x" (Lam "n" (If (PrimBin Or (PrimBin Lt (Var "n") (LitN 1)) (PrimBin Eq (Var "n") (LitN 0))) (LitN 1) (PrimBin Mul (Var "n") (App (Var "x") (PrimBin Min (Var "n") (LitN 1)))))) (Error (If (Error (PrimBin Or (Error (PrimBin Lt (LitB True) (LitN 1))) (Error (PrimBin Eq (LitB True) (LitN 0))))) (LitN 1) (PrimBin Mul (LitB True) (App (Var "x") (PrimBin Min (LitB True) (LitN 1))))))))
 rtLetRecFactTrueCTRT   =  rtLetRecFactTrueRT
 rtLetRecFactTrueDL     = Error (DownA (App (Lam "y" (LetRec "x" (Lam "n" (If (PrimBin Or (PrimBin Lt (Var "n") (LitN 1)) (PrimBin Eq (Var "n") (LitN 0))) (LitN 1) (PrimBin Mul (Var "n") (App (Var "x") (PrimBin Min (Var "n") (LitN 1)))))) (App (Var "x") (Var "y")))) (LitB True)))
 rtLetRecFactTrueUL     = AST [TagExpr TApp,AST [TagExpr TLam,AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "y"]],AST [TagExpr TLetRec,AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x"]],AST [TagExpr TLam,AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "n"]],AST [TagExpr TIf,AST [TagExpr (TPrimBin Or),AST [TagExpr (TPrimBin Lt),AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "n"]],AST [TagExpr TLitN,LitN 1]],AST [TagExpr (TPrimBin Eq),AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "n"]],AST [TagExpr TLitN,LitN 0]]],AST [TagExpr TLitN,LitN 1],AST [TagExpr (TPrimBin Mul),AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "n"]],AST [TagExpr TApp,AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x"]],AST [TagExpr (TPrimBin Min),AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "n"]],AST [TagExpr TLitN,LitN 1]]]]]],AST [TagExpr TApp,AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x"]],AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "y"]]]]],AST [TagExpr TLitB,LitB True]]
@@ -1062,7 +1062,7 @@ tyFib8 = TyInt
 tFibFalse =(eFibFalse, rtFibFalseCT, rtFibFalseRT, rtFibFalseCTRT, rtFibFalseDL, rtFibFalseUL ,rtFibFalseULDL, "ttFibFalse")
 eFibFalse = App eLetRecFibx (LitB False) 
 rtFibFalseCT    = App (Lam "y" (LetRec "x" (Lam "n" (If (PrimBin Or (PrimBin Eq (Var "n") (LitN 1)) (PrimBin Lt (Var "n") (LitN 1))) (LitN 1) (PrimBin Add (App (Var "x") (PrimBin Min (Var "n") (LitN 1))) (App (Var "x") (PrimBin Min (Var "n") (LitN 2)))))) (App (Var "x") (Var "y")))) (LitB False)
-rtFibFalseRT    = Error (LetRec "x" (Lam "n" (If (PrimBin Or (PrimBin Eq (Var "n") (LitN 1)) (PrimBin Lt (Var "n") (LitN 1))) (LitN 1) (PrimBin Add (App (Var "x") (PrimBin Min (Var "n") (LitN 1))) (App (Var "x") (PrimBin Min (Var "n") (LitN 2)))))) (Error (If (Error (PrimBin Or (Error (PrimBin Eq (LitB False) (LitN 1))) (Error (PrimBin Lt (LitB False) (LitN 1))))) (LitN 1) (PrimBin Add (App (Var "x") (PrimBin Min (LitB False) (LitN 1))) (App (Var "x") (PrimBin Min (LitB False) (LitN 2)))))))
+rtFibFalseRT    = Error ( Error (LetRec "x" (Lam "n" (If (PrimBin Or (PrimBin Eq (Var "n") (LitN 1)) (PrimBin Lt (Var "n") (LitN 1))) (LitN 1) (PrimBin Add (App (Var "x") (PrimBin Min (Var "n") (LitN 1))) (App (Var "x") (PrimBin Min (Var "n") (LitN 2)))))) (Error (If (Error (PrimBin Or (Error (PrimBin Eq (LitB False) (LitN 1))) (Error (PrimBin Lt (LitB False) (LitN 1))))) (LitN 1) (PrimBin Add (App (Var "x") (PrimBin Min (LitB False) (LitN 1))) (App (Var "x") (PrimBin Min (LitB False) (LitN 2))))))))
 rtFibFalseCTRT  = rtFibFalseRT
 rtFibFalseDL    = Error (DownA (App (Lam "y" (LetRec "x" (Lam "n" (If (PrimBin Or (PrimBin Eq (Var "n") (LitN 1)) (PrimBin Lt (Var "n") (LitN 1))) (LitN 1) (PrimBin Add (App (Var "x") (PrimBin Min (Var "n") (LitN 1))) (App (Var "x") (PrimBin Min (Var "n") (LitN 2)))))) (App (Var "x") (Var "y")))) (LitB False)))
 rtFibFalseUL    = AST [TagExpr TApp,AST [TagExpr TLam,AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "y"]],AST [TagExpr TLetRec,AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x"]],AST [TagExpr TLam,AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "n"]],AST [TagExpr TIf,AST [TagExpr (TPrimBin Or),AST [TagExpr (TPrimBin Eq),AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "n"]],AST [TagExpr TLitN,LitN 1]],AST [TagExpr (TPrimBin Lt),AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "n"]],AST [TagExpr TLitN,LitN 1]]],AST [TagExpr TLitN,LitN 1],AST [TagExpr (TPrimBin Add),AST [TagExpr TApp,AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x"]],AST [TagExpr (TPrimBin Min),AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "n"]],AST [TagExpr TLitN,LitN 1]]],AST [TagExpr TApp,AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x"]],AST [TagExpr (TPrimBin Min),AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "n"]],AST [TagExpr TLitN,LitN 2]]]]]],AST [TagExpr TApp,AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x"]],AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "y"]]]]],AST [TagExpr TLitB,LitB False]]
@@ -1130,7 +1130,7 @@ tyRandom = [tyRandom1, tyRandom2, tyRandom3]
 tRandom1 = (eRandom1, rtRandom1CT, rtRandom1RT, rtRandom1CTRT, rtRandom1DL, rtRandom1UL ,rtRandom1ULDL, "tRandom1")
 eRandom1 = LetRec "y"  (Lam "x" (If (PrimBin Eq (Var "x") (LitN 1)) (App (Var "y") (Lam "x" (PrimBin Add (Var "x") (LitN 1))))(App (Var "y") (Lam "x" (PrimBin Min (Var "x") (LitN 1))))))  (App (Var "y") (LitN 3))
 rtRandom1CT = eRandom1
-rtRandom1RT = Error (LetRec "y" (Lam "x" (If (PrimBin Eq (Var "x") (LitN 1)) (App (Var "y") (Lam "x" (PrimBin Add (Var "x") (LitN 1)))) (App (Var "y") (Lam "x" (PrimBin Min (Var "x") (LitN 1)))))) (Error (If (Error (PrimBin Eq (Lam "x" (PrimBin Min (Var "x") (LitN 1))) (LitN 1))) (App (Var "y") (Lam "x" (PrimBin Add (Var "x") (LitN 1)))) (App (Var "y") (Lam "x" (PrimBin Min (Var "x") (LitN 1)))))))
+rtRandom1RT = Error (Error (LetRec "y" (Lam "x" (If (PrimBin Eq (Var "x") (LitN 1)) (App (Var "y") (Lam "x" (PrimBin Add (Var "x") (LitN 1)))) (App (Var "y") (Lam "x" (PrimBin Min (Var "x") (LitN 1)))))) (Error (If (Error (PrimBin Eq (Lam "x" (PrimBin Min (Var "x") (LitN 1))) (LitN 1))) (App (Var "y") (Lam "x" (PrimBin Add (Var "x") (LitN 1)))) (App (Var "y") (Lam "x" (PrimBin Min (Var "x") (LitN 1))))))))
 rtRandom1CTRT = rtRandom1RT
 rtRandom1DL = Error (DownA eRandom1)
 rtRandom1UL = AST [TagExpr TLetRec,AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "y"]],AST [TagExpr TLam,AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x"]],AST [TagExpr TIf,AST [TagExpr (TPrimBin Eq),AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x"]],AST [TagExpr TLitN,LitN 1]],AST [TagExpr TApp,AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "y"]],AST [TagExpr TLam,AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x"]],AST [TagExpr (TPrimBin Add),AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x"]],AST [TagExpr TLitN,LitN 1]]]],AST [TagExpr TApp,AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "y"]],AST [TagExpr TLam,AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x"]],AST [TagExpr (TPrimBin Min),AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x"]],AST [TagExpr TLitN,LitN 1]]]]]],AST [TagExpr TApp,AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "y"]],AST [TagExpr TLitN,LitN 3]]]
@@ -1197,17 +1197,17 @@ rtASTTVar1CTRT =  rtASTTVar1RT
 rtASTTVar1DL = Var "c"
 rtASTTVar1UL = AST [TagExpr TPromote,TagExpr TVar,AST [TagExpr TPromote,TagExpr TVarRep,AST [TagExpr TVarRep,VarRep "c"]]]
 rtASTTVar1ULDL =eASTTVar1
-tyASTTVar1 = TyCodeUnP
+tyASTTVar1 = TyCode
 
 tASTTVar2 =(eASTTVar2, rtASTTVar2CT, rtASTTVar2RT, rtASTTVar2CTRT, rtASTTVar2DL, rtASTTVar2UL ,rtASTTVar2ULDL, "tASTTVar2")
 eASTTVar2 = AST [TagExpr TVar, AST [TagExpr TVarRep, (LitB True)]]
 rtASTTVar2CT = AST [TagExpr TVar,AST [TagExpr TVarRep,(LitB True)]]
 rtASTTVar2RT = rtASTTVar2CT
 rtASTTVar2CTRT =  rtASTTVar2RT
-rtASTTVar2DL = Error (DownA (AST [TagExpr TVar,Error (Error (DownA (AST [TagExpr TVarRep,LitB True])))]))
+rtASTTVar2DL = Error (DownA eASTTVar2)
 rtASTTVar2UL = AST [TagExpr TPromote,TagExpr TVar,AST [TagExpr TPromote,TagExpr TVarRep,AST [TagExpr TLitB,LitB True]]]
 rtASTTVar2ULDL =eASTTVar2
-tyASTTVar2 = TyCodeUnP
+tyASTTVar2 = TyCode
 
 
 tASTTVar3 =(eASTTVar3, rtASTTVar3CT, rtASTTVar3RT, rtASTTVar3CTRT, rtASTTVar3DL, rtASTTVar3UL ,rtASTTVar3ULDL, "tASTTVar3")
@@ -1218,7 +1218,7 @@ rtASTTVar3CTRT =  AST [TagExpr TVar, AST [TagExpr TVarRep,VarRep "x"]]
 rtASTTVar3DL = Var "x"
 rtASTTVar3UL = AST [TagExpr TPromote,TagExpr TVar,AST [TagExpr TPromote,TagExpr TVarRep,AST [TagExpr TVarRep,VarRep "x"]]]
 rtASTTVar3ULDL =AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x"]]
-tyASTTVar3 = TyCodeUnP
+tyASTTVar3 = TyCode
 
 
 tASTTVar4 =(eASTTVar4, rtASTTVar4CT, rtASTTVar4RT, rtASTTVar4CTRT, rtASTTVar4DL, rtASTTVar4UL ,rtASTTVar4ULDL, "tASTTVar4")
@@ -1228,8 +1228,8 @@ rtASTTVar4RT = Error eASTTVar4
 rtASTTVar4CTRT = AST [TagExpr TVarRep,VarRep "y"]
 rtASTTVar4DL = Error (DownA eASTTVar4)
 rtASTTVar4UL = Error (UpA eASTTVar4)
-rtASTTVar4ULDL = Error (Error (UpA eASTTVar4))
-tyASTTVar4 = TyCodeUnP
+rtASTTVar4ULDL = Error (DownA (Error (UpA eASTTVar4)))
+tyASTTVar4 = TyCode
 
 tASTTLam :: [TestList]
 tASTTLam = [tASTTLam1, tASTTLam2, tASTTLam3, tASTTLam4]
@@ -1243,7 +1243,7 @@ rtASTTLam1CTRT = eASTTLam1
 rtASTTLam1DL = Lam "x" (Var "x")
 rtASTTLam1UL = AST [TagExpr TPromote,TagExpr TLam,AST [TagExpr TPromote,TagExpr TVar,AST [TagExpr TPromote,TagExpr TVarRep,AST [TagExpr TVarRep,VarRep "x"]]],AST [TagExpr TPromote,TagExpr TVar,AST [TagExpr TPromote,TagExpr TVarRep,AST [TagExpr TVarRep,VarRep "x"]]]]
 rtASTTLam1ULDL = eASTTLam1
-tyASTTLam1 = TyCodeUnP
+tyASTTLam1 = TyCode
 
 tASTTLam2 =(eASTTLam2, rtASTTLam2CT, rtASTTLam2RT, rtASTTLam2CTRT, rtASTTLam2DL, rtASTTLam2UL ,rtASTTLam2ULDL, "tASTTLam2")
 eASTTLam2 = AST [TagExpr TLam, (LitB True), (LitB True)]
@@ -1253,7 +1253,7 @@ rtASTTLam2CTRT = eASTTLam2
 rtASTTLam2DL = Error (DownA eASTTLam2)
 rtASTTLam2UL = AST [TagExpr TPromote, TagExpr TLam, AST [TagExpr TLitB, (LitB True)], AST [TagExpr TLitB, (LitB True)]]
 rtASTTLam2ULDL = eASTTLam2
-tyASTTLam2 = TyCodeUnP
+tyASTTLam2 = TyCode
 
 tASTTLam3 =(eASTTLam3, rtASTTLam3CT, rtASTTLam3RT, rtASTTLam3CTRT, rtASTTLam3DL, rtASTTLam3UL ,rtASTTLam3ULDL, "tASTTLam3")
 eASTTLam3 = AST [TagExpr TLam, (LitB True), (VarRep "x")]
@@ -1263,7 +1263,7 @@ rtASTTLam3CTRT = eASTTLam3
 rtASTTLam3DL =Error (DownA eASTTLam3)
 rtASTTLam3UL = AST [TagExpr TPromote, TagExpr TLam, AST [TagExpr TLitB, (LitB True)], AST [TagExpr TVarRep, (VarRep "x")]] 
 rtASTTLam3ULDL = eASTTLam3
-tyASTTLam3 = TyCodeUnP
+tyASTTLam3 = TyCode
 
 tASTTLam4 =(eASTTLam4, rtASTTLam4CT, rtASTTLam4RT, rtASTTLam4CTRT, rtASTTLam4DL, rtASTTLam4UL ,rtASTTLam4ULDL, "tASTTLam4")
 eASTTLam4 = AST [TagExpr TLam, AST [TagExpr TVar, UpA (VarRep "x")], (AST [TagExpr TVar, AST [TagExpr TVarRep, GenSym]])]
@@ -1273,7 +1273,7 @@ rtASTTLam4CTRT = AST [TagExpr TLam,AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep
 rtASTTLam4DL = Error (DownA eASTTLam4)
 rtASTTLam4UL = AST [TagExpr TPromote,TagExpr TLam,AST [TagExpr TPromote,TagExpr TVar,AST [TagExpr TPromote,TagExpr TVarRep,AST [TagExpr TVarRep,VarRep "x"]]],AST [TagExpr TPromote,TagExpr TVar,AST [TagExpr TPromote,TagExpr TVarRep,AST [TagExpr TGenSym]]]]
 rtASTTLam4ULDL = AST [TagExpr TLam,AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x"]],AST [TagExpr TVar,AST [TagExpr TVarRep,GenSym]]]
-tyASTTLam4 = TyCodeUnP
+tyASTTLam4 = TyCode
 
 
 -- tASTTApp :: [TestList]
@@ -1340,34 +1340,34 @@ tEvalA = [tEvalA1, tEvalA2, tEvalA3]
 tyEvalA = [tyEvalA1, tyEvalA2, tyEvalA3]
 
 tEvalA1 =(eEvalA1, rtEvalA1CT, rtEvalA1RT, rtEvalA1CTRT, rtEvalA1DL, rtEvalA1UL ,rtEvalA1ULDL, "tEvalA1")
-eEvalA1 = DownA ( EvalA TyCodeUnP (AST [TagExpr TApp,AST [TagExpr TLam,AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x"]],AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x"]]],AST [TagExpr TPromote,TagExpr TVar,AST [TagExpr TPromote,TagExpr TVarRep,AST [TagExpr TVarRep,VarRep "x"]]]]))
+eEvalA1 = DownA ( EvalA TyCode (AST [TagExpr TApp,AST [TagExpr TLam,AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x"]],AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x"]]],AST [TagExpr TPromote,TagExpr TVar,AST [TagExpr TPromote,TagExpr TVarRep,AST [TagExpr TVarRep,VarRep "x"]]]]))
 rtEvalA1CT = Var "x"
 rtEvalA1RT = Error (eEvalA1)
 rtEvalA1CTRT = Var "x"
-rtEvalA1DL =Error (DownA (Error (Error eEvalA1)))
+rtEvalA1DL = Error (DownA (Error (DownA (Error (eEvalA1)))))
 rtEvalA1UL = Error (UpA eEvalA1)
 -- DownA (EvalA (AST [TagExpr TApp,AST [TagExpr TLam,AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x"]],AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x"]]],AST [TagExpr TPromote,TagExpr TVar,AST [TagExpr TPromote,TagExpr TVarRep,AST [TagExpr TVarRep,VarRep "x"]]]])))
-rtEvalA1ULDL = Error (Error (UpA eEvalA1))
+rtEvalA1ULDL = Error (DownA (Error (UpA eEvalA1)))
 tyEvalA1 = TyVar "TyVar1{x}"
 
 tEvalA2 =(eEvalA2, rtEvalA2CT, rtEvalA2RT, rtEvalA2CTRT, rtEvalA2DL, rtEvalA2UL ,rtEvalA2ULDL, "tEvalA2")
-eEvalA2 =  EvalA (TyVar "TyVar3{fresh}") (App (Lam "x" (UpA (Var "x")))  (LetRec "y"  ( PrimBin Min (Var "y") (Var "y")) (Var "x")))
-rtEvalA2CT = EvalA (TyVar "TyVar3{fresh}")(App (Lam "x" (AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x"]])) (LetRec "y" (PrimBin Min (Var "y") (Var "y")) (Var "x")))
-rtEvalA2RT = Error (Error (Error (UpA (LetRec "y" (PrimBin Min (Var "y") (Var "y")) (Var "x")))))
+eEvalA2 =  EvalA (TyVar "TyVar1{x}") (App (Lam "x" (UpA (Var "x")))  (LetRec "y"  ( PrimBin Min (Var "y") (Var "y")) (Var "x")))
+rtEvalA2CT = EvalA (TyVar "TyVar1{x}") (App (Lam "x" (AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x"]])) (LetRec "y" (PrimBin Min (Var "y") (Var "y")) (Var "x")))
+rtEvalA2RT = Error (Error (DownA (Error (UpA (LetRec "y" (PrimBin Min (Var "y") (Var "y")) (Var "x"))))))
 rtEvalA2CTRT = Var "x"
 rtEvalA2DL = Error (DownA eEvalA2)
-rtEvalA2UL = AST [TagExpr (TEvalA (TyVar "TyVar3{fresh}")),AST [TagExpr TApp,AST [TagExpr TLam,AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x"]],AST [TagExpr TPromote,TagExpr TVar,AST [TagExpr TPromote,TagExpr TVarRep,AST [TagExpr TVarRep,VarRep "x"]]]],AST [TagExpr TLetRec,AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "y"]],AST [TagExpr (TPrimBin Min),AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "y"]],AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "y"]]],AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x"]]]]]
-rtEvalA2ULDL = EvalA (TyVar "TyVar3{fresh}")(App (Lam "x" (AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x"]])) (LetRec "y" (PrimBin Min (Var "y") (Var "y")) (Var "x")))
-tyEvalA2 = TyVar "TyVar1{x}"
+rtEvalA2UL = AST [TagExpr (TEvalA (TyVar "TyVar1{x}")),AST [TagExpr TApp,AST [TagExpr TLam,AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x"]],AST [TagExpr TPromote,TagExpr TVar,AST [TagExpr TPromote,TagExpr TVarRep,AST [TagExpr TVarRep,VarRep "x"]]]],AST [TagExpr TLetRec,AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "y"]],AST [TagExpr (TPrimBin Min),AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "y"]],AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "y"]]],AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x"]]]]]
+rtEvalA2ULDL = EvalA (TyVar "TyVar1{x}") (App (Lam "x" (AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x"]])) (LetRec "y" (PrimBin Min (Var "y") (Var "y")) (Var "x")))
+tyEvalA2 = (TyVar "TyVar1{x}")
 
 tEvalA3 =(eEvalA3, rtEvalA3CT, rtEvalA3RT, rtEvalA3CTRT, rtEvalA3DL, rtEvalA3UL ,rtEvalA3ULDL, "tEvalA3")
-eEvalA3 =  EvalA (TyFunc (TyVar "TyVar4{fresh}") TyCodeUnP) (Lam "x" (App (Lam "y" (Var "t") )  (UpA (Var "o"))))
-rtEvalA3CT = EvalA (TyFunc (TyVar "TyVar4{fresh}") TyCodeUnP) (Lam "x" (App (Lam "y" (Var "t")) (AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "o"]])))
+eEvalA3 =  EvalA (TyFunc (TyVar "TyVar4{fresh}") TyCode) (Lam "x" (App (Lam "y" (Var "t") )  (UpA (Var "o"))))
+rtEvalA3CT = EvalA (TyFunc (TyVar "TyVar4{fresh}") TyCode) (Lam "x" (App (Lam "y" (Var "t")) (AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "o"]])))
 rtEvalA3RT = Error (Error (DownA (Lam "x" (Var "t"))))
 rtEvalA3CTRT = Error (Error (DownA (Lam "x" (Var "t"))))
-rtEvalA3DL = Error (DownA (EvalA (TyFunc (TyVar "TyVar4{fresh}") TyCodeUnP) (Lam "x" (App (Lam "y" (Var "t")) (UpA (Var "o"))))))
-rtEvalA3UL =  AST [TagExpr (TEvalA (TyFunc (TyVar "TyVar4{fresh}") TyCodeUnP)),AST [TagExpr TLam,AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x"]],AST [TagExpr TApp,AST [TagExpr TLam,AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "y"]],AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "t"]]],AST [TagExpr TPromote,TagExpr TVar,AST [TagExpr TPromote,TagExpr TVarRep,AST [TagExpr TVarRep,VarRep "o"]]]]]]
-rtEvalA3ULDL = EvalA (TyFunc (TyVar "TyVar4{fresh}") TyCodeUnP) (Lam "x" (App (Lam "y" (Var "t")) (AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "o"]])))
+rtEvalA3DL = Error (DownA (EvalA (TyFunc (TyVar "TyVar4{fresh}") TyCode) (Lam "x" (App (Lam "y" (Var "t")) (UpA (Var "o"))))))
+rtEvalA3UL =  AST [TagExpr (TEvalA (TyFunc (TyVar "TyVar4{fresh}") TyCode)),AST [TagExpr TLam,AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x"]],AST [TagExpr TApp,AST [TagExpr TLam,AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "y"]],AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "t"]]],AST [TagExpr TPromote,TagExpr TVar,AST [TagExpr TPromote,TagExpr TVarRep,AST [TagExpr TVarRep,VarRep "o"]]]]]]
+rtEvalA3ULDL = EvalA (TyFunc (TyVar "TyVar4{fresh}") TyCode) (Lam "x" (App (Lam "y" (Var "t")) (AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "o"]])))
 tyEvalA3 = TyErrorEq
 
 
@@ -1384,18 +1384,18 @@ rtLetDA1RT = Error eLetDA1
 rtLetDA1CTRT = LitB False
 rtLetDA1DL = Error (DownA eLetDA1)
 rtLetDA1UL = Error (UpA eLetDA1)
-rtLetDA1ULDL = Error (Error (UpA eLetDA1))
+rtLetDA1ULDL = Error (DownA (Error (UpA eLetDA1)))
 tyLetDA1 = TyBool
 
 tLetDA2 =(eLetDA2, rtLetDA2CT, rtLetDA2RT, rtLetDA2CTRT, rtLetDA2DL, rtLetDA2UL ,rtLetDA2ULDL, "tLetDA2")
-eLetDA2 = LetDA "x" (Let "x" (AST [TagExpr TLam,AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x"]],AST [TagExpr TApp,AST [TagExpr TLam,AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "y"]],AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "t"]]],AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "o"]]]]) (Var "x")) (EvalA (TyVar "TyVar4{fresh}") (AST [TagExpr TApp, (Var "x"), UpA (LitN 3)]))
-rtLetDA2CT = EvalA (TyVar "TyVar4{fresh}") (AST [TagExpr TApp,AST [TagExpr TLam,AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x"]],AST [TagExpr TApp,AST [TagExpr TLam,AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "y"]],AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "t"]]],AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "o"]]]],AST [TagExpr TLitN,LitN 3]])
+eLetDA2 = LetDA "x" (Let "x" (AST [TagExpr TLam,AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x"]],AST [TagExpr TApp,AST [TagExpr TLam,AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "y"]],AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "t"]]],AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "o"]]]]) (Var "x")) (EvalA (TyVar "TyVar8{fresh}") (AST [TagExpr TApp, (Var "x"), UpA (LitN 3)]))
+rtLetDA2CT = EvalA (TyVar "TyVar8{fresh}") (AST [TagExpr TApp,AST [TagExpr TLam,AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x"]],AST [TagExpr TApp,AST [TagExpr TLam,AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "y"]],AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "t"]]],AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "o"]]]],AST [TagExpr TLitN,LitN 3]])
 rtLetDA2RT = Error eLetDA2
 rtLetDA2CTRT =  Var "t"
 rtLetDA2DL = Error (DownA eLetDA2)
 rtLetDA2UL = Error (UpA eLetDA2)
-rtLetDA2ULDL = Error (Error (UpA eLetDA2))
-tyLetDA2 = TyVar "TyVar4{fresh}"
+rtLetDA2ULDL = Error (DownA (Error (UpA eLetDA2)))
+tyLetDA2 = (TyVar "TyVar8{fresh}")
 
 tLetDA3 =(eLetDA3, rtLetDA3CT, rtLetDA3RT, rtLetDA3CTRT, rtLetDA3DL, rtLetDA3UL ,rtLetDA3ULDL, "tLetDA3")
 eLetDA3 = LetDA "y" (Let "x" (LitN 3) (UpA (PrimBin Add (Var "x") (Var "x")))) (Var "y")
@@ -1404,8 +1404,8 @@ rtLetDA3RT = Error (LetDA "y" (Let "x" (LitN 3) (UpA (PrimBin Add (Var "x") (Var
 rtLetDA3CTRT =rtLetDA3CT
 rtLetDA3DL = Error (DownA eLetDA3)
 rtLetDA3UL = Error (UpA eLetDA3)
-rtLetDA3ULDL = Error (Error (UpA eLetDA3))
-tyLetDA3 = TyCodeUnP
+rtLetDA3ULDL = Error (DownA (Error (UpA eLetDA3)))
+tyLetDA3 = TyCode
 
 tLetDA4 =(eLetDA4, rtLetDA4CT, rtLetDA4RT, rtLetDA4CTRT, rtLetDA4DL, rtLetDA4UL ,rtLetDA4ULDL, "tLetDA4")
 eLetDA4 = (LetDA "y" (Let "z" (UpA (Let "x" (LitN 3) (PrimBin Add (Var "x") (Var "x")))) (Var "z")) (Var "y")) 
@@ -1414,8 +1414,8 @@ rtLetDA4RT = Error eLetDA4
 rtLetDA4CTRT = rtLetDA4CT
 rtLetDA4DL = Error (DownA eLetDA4)
 rtLetDA4UL = Error (UpA eLetDA4)
-rtLetDA4ULDL = Error (Error (UpA eLetDA4))
-tyLetDA4 = TyCodeUnP
+rtLetDA4ULDL = Error (DownA (Error (UpA eLetDA4)))
+tyLetDA4 = TyCode
 
 
 
@@ -1462,7 +1462,7 @@ stgPwr = (Lam "powX"         (AST [TagExpr TLam,     AST [TagExpr TVar,  AST [Ta
 -- )
 
 
-inproj = (Lam "i" (Lam "n"    (LetDA                 "ith"                 (AST [TagExpr TVar,  AST [TagExpr TVarRep, GenSym]])                  (LetRec "N"            (Lam "count"                                             (If                                                         (PrimBin Lt (Var "count") (Var "n") )                                        (If                                                                     (PrimBin Eq (Var "count") (PrimBin Min (Var "i") (LitN 1)))                                                (AST [                                                        TagExpr TLam,                            (Var "ith"),                                                         App (Var "N") (PrimBin Add (Var "count") (LitN 1))                                                   ])                                                                    (AST [                                                        TagExpr TLam,                            AST [                                TagExpr TVar,                                                                 AST [                                                                        TagExpr TVarRep,                                    GenSym                                                                        ]                                                                ],                                                        App (Var "N") (PrimBin Add (Var "count") (LitN 1))                             ]                        ))(Var "ith")                            )                     )                    (App (Var "N") (LitN 0))            ))))
+inproj = (Lam "i" (Lam "n"    (Let                 "ith"                 (AST [TagExpr TVar,  AST [TagExpr TVarRep, GenSym]])                  (LetRec "N"            (Lam "count"                                             (If                                                         (PrimBin Lt (Var "count") (Var "n") )                                        (If                                                                     (PrimBin Eq (Var "count") (PrimBin Min (Var "i") (LitN 1)))                                                (AST [                                                        TagExpr TLam,                            (Var "ith"),                                                         App (Var "N") (PrimBin Add (Var "count") (LitN 1))                                                   ])                                                                    (AST [                                                        TagExpr TLam,                            AST [                                TagExpr TVar,                                                                 AST [                                                                        TagExpr TVarRep,                                    GenSym                                                                        ]                                                                ],                                                        App (Var "N") (PrimBin Add (Var "count") (LitN 1))                             ]                        ))(Var "ith")                            )                     )                    (App (Var "N") (LitN 0))            ))))
 inprojtest = Lam "ip" (Lam "np" (LetDA "i" (Var "ip") (LetDA "n" (Var "np") (LetDA "ith" (Var "iTH") (LetRec "N" (Lam "count" (If (PrimBin Eq (LitN 3) (Var "n")) (Var "ith") (App (Var "N") (LitN 3)))) (App (Var "N") (LitN 5)))))))
 -- ithnaryproj = 
 -- Lam "i" 

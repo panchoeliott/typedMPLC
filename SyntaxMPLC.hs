@@ -51,11 +51,10 @@ data Type = TyVar String
     | TyInt 
     | TyBool
     | TyFunc Type Type
-    | TyCodeUnP
+    | TyCode
     -- | TyCode Type 
     -- | TyCodePower Int Type 
     | TyTag
-    | TyTBC
     | TyErrorEq
     | TyErrorExpr Expr
     | TyError Expr Type Type -- expression1 has type1 but should have type2
@@ -232,7 +231,7 @@ containsError (TyVarRep)        = False
 containsError TyInt             = False
 containsError TyBool            = False
 containsError (TyFunc t1 t2)    = containsError t1 || containsError t2
-containsError (TyCodeUnP)       = False
+containsError (TyCode)       = False
 containsError TyTag             = False
 containsError (TyErrorExpr e1)  = True
 containsError TyErrorEq         = True
@@ -277,7 +276,7 @@ subType (Just [(ts1, name1)]) (TyVar var1)
     | otherwise                                     = (TyVar var1)
 subType (Just [(ts1, name1)]) TyVarRep              = TyVarRep
 subType (Just [(ts1, name1)]) (TyFunc type1 type2)  = TyFunc (subType (Just [(ts1, name1)]) type1) (subType (Just [(ts1, name1)]) type2)
-subType (Just [(ts1, name1)]) (TyCodeUnP)           = TyCodeUnP
+subType (Just [(ts1, name1)]) (TyCode)           = TyCode
 subType (Just [(ts1, name1)]) (TyTag)               = TyTag
 subType sub1 (TyErrorEq)                            = TyErrorEq
 subType sub1 (TyError a b c)                        = TyError a b c

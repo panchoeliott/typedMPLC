@@ -57,7 +57,7 @@ filtTyAll = filterAllTy ALL.typedAll
 -- checkExprP = map (\(a1, a2, a3, a4, a5, a6, a7, a8) ->                           (a8, ("CT", ((typefromSubType (TC.algWExp a1)) == (typefromSubType (TC.algWExp a2)))),  ("RT", ((typefromSubType (TC.algWExp a1)) == (typefromSubType (TC.algWExp a3)))),  ("CTRT", ((typefromSubType (TC.algWExp a1)) == (typefromSubType (TC.algWExp a4)))), ("UL", ((TyCode (typefromSubType (TC.algWExp a1))) == (typefromSubType (TC.algWExp a6)))))) ALL.tAll
 
 -- checkExprUP ::[(String, (String, Bool), (String, Bool), (String, Bool), (String, Bool))]
--- checkExprUP = map (\(a1, a2, a3, a4, a5, a6, a7, a8) ->                           (a8, ("CT", ((typefromSubType (TCUP.algWExp a1)) == (typefromSubType (TCUP.algWExp a2)))),  ("RT", ((typefromSubType (TCUP.algWExp a1)) == (typefromSubType (TCUP.algWExp a3)))),  ("CTRT", ((typefromSubType (TCUP.algWExp a1)) == (typefromSubType (TCUP.algWExp a4)))), ("UL", ((TyCodeUnP) == (typefromSubType (TCUP.algWExp a6)))))) ALL.tAll
+-- checkExprUP = map (\(a1, a2, a3, a4, a5, a6, a7, a8) ->                           (a8, ("CT", ((typefromSubType (TCUP.algWExp a1)) == (typefromSubType (TCUP.algWExp a2)))),  ("RT", ((typefromSubType (TCUP.algWExp a1)) == (typefromSubType (TCUP.algWExp a3)))),  ("CTRT", ((typefromSubType (TCUP.algWExp a1)) == (typefromSubType (TCUP.algWExp a4)))), ("UL", ((TyCode) == (typefromSubType (TCUP.algWExp a6)))))) ALL.tAll
 
 
  -- (AST [TagExpr (TPrimBin Add),AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x"]],AST [TagExpr TVar,AST [TagExpr TVarRep,VarRep "x"]]],Just [("x",TyInt)],2)
